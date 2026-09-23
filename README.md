@@ -42,20 +42,33 @@ TOP 3 FIXES:
 ## The agent loop (the point)
 
 ```
-mystic-studio review https://mysite.com        # → session: 20260923-1015-mysite
+mystic-studio review https://mysite.com        # → score: 62/100, session: 20260923-1015-mysite
    ... your agent edits the code ...
 mystic-studio recheck 20260923-1015-mysite     # → FIXES LANDED: #1 DONE, #2 PARTIAL, #3 OPEN
 ```
 
 `recheck` re-shoots the page and grades the delta against the previous verdict — so an AI agent can iterate on design without a human staring at screenshots. Works for images too (`see` → edit → `recheck --image new.png`).
 
+**Fully autonomous mode:**
+
+```
+mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-rounds 3
+```
+
+`polish` runs the whole loop itself: review → hand the top fixes to your coding runner (any command with the `mystic-coding-room` interface) → delta-recheck → repeat until SHIP, round-capped and budget-capped, with a transcript saved per round. Every review also feeds the **taste memory** — next round's reviewer remembers what was already asked for, and `mystic-studio note --target ... --note "owner hates purple"` teaches it permanent preferences.
+
+**Whole-site audits:** `mystic-studio audit https://mysite.com` crawls up to N same-host pages and judges the *site*: per-page verdicts, one score, and cross-page consistency (nav, colour, type, spacing drift between pages).
+
 ## Tools
 
 | Tool | What it does | Costs money? |
 |---|---|---|
-| `photo_see` | Photography critique: composition, light, defects, print-readiness | no |
-| `web_review` | Desktop + mobile screenshot, design verdict + top-3 fixes | no |
+| `photo_see` | Photography critique: composition, light, defects, print-readiness, SCORE /100 | no |
+| `web_review` | Desktop + mobile screenshot, design verdict + top-3 fixes + SCORE /100 | no |
 | `recheck` | Delta review against a previous session: what changed, which fixes landed | no |
+| `web_audit` | Crawls a whole site (default 8 pages), per-page verdicts, site SCORE, **cross-page consistency police** | no |
+| `polish` | **Autonomous loop:** review → coding runner applies fixes → delta-recheck → repeat until SHIP (round + budget capped) | runner time |
+| `taste_note` | Teach the reviewer a preference for a site; reviews also store their top fixes automatically — taste sharpens every round | no |
 | `web_shot` | Screenshots, any widths, full-page option | no |
 | `video_see` | Scene summary, timestamped timeline, transcription, quality verdict | no |
 | `video_keyframes` | N evenly-spaced frames as JPGs | no |

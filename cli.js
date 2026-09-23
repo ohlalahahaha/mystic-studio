@@ -24,7 +24,11 @@ function usage() {
   mystic-studio vsee <video> [--focus "..."] [--deep]
   mystic-studio vkey <video> [--count 8]
   mystic-studio vgif <video> [--start 0] [--sec 5] [--width 480]
-  mystic-studio serve                          start the HTTP job API
+  mystic-studio audit <url> [--max-pages 8]     whole-site crawl + consistency
+  mystic-studio polish --url u --repo dir       autonomous fix loop until SHIP
+  mystic-studio taste [target]                  show learned taste notes
+  mystic-studio note --target u --note "..."    teach the reviewer
+  mystic-studio serve                           start the HTTP job API
 
 First run: copy .env.example to ~/.config/mystic-studio/.env and add your
 GEMINI_API_KEY. Then run: mystic-studio doctor`);
@@ -62,6 +66,17 @@ function main() {
     case 'vsee': name = 'video_see'; args.video = pos[0]; break;
     case 'vkey': name = 'video_keyframes'; args.video = pos[0]; break;
     case 'vgif': name = 'video_gif'; args.video = pos[0]; break;
+    case 'audit': name = 'web_audit'; args.url = pos[0]; break;
+    case 'polish': name = 'polish'; break;
+    case 'taste': {
+      const core = require('./lib/core');
+      const c = core.load();
+      const t = core.tasteFile(c);
+      if (pos[0]) { console.log(core.tasteFor(c, pos[0]) || '(no notes for that target)'); return; }
+      for (const [h, notes] of Object.entries(t.notes || {})) console.log(`${h}: ${notes.length} note(s) — latest: ${notes[notes.length - 1].note.slice(0, 90)}`);
+      return;
+    }
+    case 'note': name = 'taste_note'; break;
     case 'serve': {
       const http = path.join(__dirname, 'http.js');
       const r = spawnSync(process.execPath, [http, ...argv.slice(1)], { stdio: 'inherit' });

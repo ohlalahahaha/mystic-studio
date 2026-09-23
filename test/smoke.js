@@ -24,17 +24,20 @@ assert(!/sk-|AIza/.test(JSON.stringify(c)), 'no raw secret shape in config dump'
 assert(cfg.isAllowedPath(c, path.join(os.tmpdir(), 'x.png')) === true, 'tmp allowed');
 assert(cfg.isAllowedPath(c, '/etc/passwd') === false, 'system paths blocked');
 
-// 2. prompts exist and are de-personalized (no estate names)
+// 2. prompts exist and are de-personalized (no estate names); scored laws carry SCORE
 const prompts = require(path.join(ROOT, 'lib', 'prompts'));
-for (const k of ['PHOTO_LAW', 'DESIGN_LAW', 'VIDEO_LAW', 'DELTA_LAW']) assert(prompts[k].length > 200, `${k} present`);
+for (const k of ['PHOTO_LAW', 'DESIGN_LAW', 'VIDEO_LAW', 'DELTA_LAW', 'AUDIT_LAW']) assert(prompts[k].length > 200, `${k} present`);
 for (const key of Object.keys(prompts)) assert(!/Phoenix|estate|hq\//i.test(prompts[key]), `${key} has no estate wording`);
+assert(/SCORE:/.test(prompts.PHOTO_LAW) && /SCORE:/.test(prompts.DESIGN_LAW), 'photo+design laws carry SCORE');
+assert(prompts.AUDIT_LAW.includes('${N}'), 'AUDIT_LAW keeps its ${N} placeholder');
+assert(/CROSS-PAGE CONSISTENCY/.test(prompts.AUDIT_LAW), 'AUDIT_LAW judges cross-page consistency');
 
-// 3. tool list: 11 tools, schema'd, neutral
+// 3. tool list: 14 tools, schema'd, neutral
 const { TOOLS } = require(path.join(ROOT, 'lib', 'core'));
-assert.strictEqual(TOOLS.length, 11, '11 tools');
+assert.strictEqual(TOOLS.length, 14, '14 tools');
 for (const t of TOOLS) { assert(t.name && t.description && t.inputSchema, `${t.name} complete`); assert(!/Phoenix/i.test(t.description)); }
 const names = TOOLS.map((t) => t.name);
-for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate']) assert(names.includes(want), `${want} present`);
+for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate', 'web_audit', 'polish', 'taste_note']) assert(names.includes(want), `${want} present`);
 assert(names.some((n) => /generate|edit/.test(n) && TOOLS.find((t) => t.name === n).description.includes('CREDITS')), 'paid tools labelled');
 
 // 4. MCP handshake over stdio
@@ -45,7 +48,7 @@ const hs = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], { input: 
 const lines = hs.stdout.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
 assert(lines.find((m) => m.id === 1 && m.result && m.result.serverInfo), 'initialize answered');
 const toolsMsg = lines.find((m) => m.id === 2);
-assert(toolsMsg.result.tools.length === 11, 'tools/list answered with 11');
+assert(toolsMsg.result.tools.length === 14, 'tools/list answered with 14');
 
 // 5. unknown tool -> clean MCP error
 const bad = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], {
