@@ -1,0 +1,17 @@
+{
+  "name": "mystic-studio",
+  "version": "1.0.0",
+  "description": "Zero-dependency AI media studio: photography eye, web design review, screenshots, video intelligence — MCP server, HTTP API, and CLI in one package.",
+  "license": "MIT",
+  "author": "ohlalahahaha",
+  "repository": { "type": "git", "url": "https://github.com/ohlalahahaha/mystic-studio" },
+  "engines": { "node": ">=18" },
+  "bin": {
+    "mystic-studio": "cli.js",
+    "mystic-studio-http": "http.js",
+    "mystic-coding-room": "coding-room.js"
+  },
+  "files": ["lib", "test", "server.js", "http.js", "run.js", "cli.js", "shot.js", "coding-room.js", "README.md", "SECURITY.md", "config.example.json", ".env.example"],
+  "scripts": { "test": "node test/smoke.js" },
+  "keywords": ["mcp", "model-context-protocol", "ai-tools", "photography", "web-design", "video", "screenshots", "critique"]
+}

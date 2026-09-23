@@ -1,0 +1,17 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: smoke test (offline)
+        run: node test/smoke.js
+      - name: doctor runs
+        run: node cli.js doctor || true

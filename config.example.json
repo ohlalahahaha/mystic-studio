@@ -1,0 +1,17 @@
+{
+  "flashModel": "gemini-3.8-flash",
+  "proModel": "gemini-3.1-pro-preview",
+  "outDir": "~/Desktop/mystic-studio",
+  "port": 7817,
+  "host": "127.0.0.1",
+  "maxImageMb": 9,
+  "maxVideoMb": 19,
+  "allowFileUrls": false,
+  "allowDirs": [],
+  "browserExe": "",
+  "playwrightCore": "",
+  "higgsfieldCli": "higgsfield",
+  "codingRunner": "glm-run",
+  "token": "",
+  "envFile": "~/.config/mystic-studio/.env"
+}
