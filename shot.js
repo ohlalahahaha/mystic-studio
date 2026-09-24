@@ -73,7 +73,12 @@ function check() {
   if (_check) return _check;
   const pw = resolvePlaywright();
   let browser = null;
-  if (pw) {
+  const envChrome = process.env.MYSTIC_STUDIO_CHROME;
+  if (envChrome) {
+    // Explicit override wins, fail-closed: a set-but-missing path is an error to report,
+    // never silently fall back to a scan that ignores what the user asked for.
+    browser = fs.existsSync(envChrome) ? envChrome : null;
+  } else if (pw) {
     try {
       const { chromium } = require(pw);
       const auto = chromium.executablePath();
@@ -97,7 +102,8 @@ function main() {
   const width = Number(arg('--w')) || 1280;
   const height = Number(arg('--h')) || 900;
   const full = process.argv.includes('--full');
-  if (!url || !out) { console.error('usage: shot.js <url> <out.png> [--w 1280] [--h 900] [--full]'); process.exit(2); }
+  const healthPath = arg('--health');
+  if (!url || !out) { console.error('usage: shot.js <url> <out.png> [--w 1280] [--h 900] [--full] [--health out.health.json]'); process.exit(2); }
 
   const { pw, browser } = check();
   if (!pw) { console.error('playwright-core not found — npm i -g playwright-core, or set PLAYWRIGHT_CORE'); process.exit(1); }
@@ -107,10 +113,35 @@ function main() {
   (async () => {
     const browserCtx = await chromium.launch({ headless: true, executablePath: browser });
     const page = await browserCtx.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
+    // Page health: rendered-DOM facts a screenshot alone cannot prove. Listeners attach
+    // BEFORE goto so early 4xx/5xx and console errors are caught, not just steady-state.
+    const health = { url, at: new Date().toISOString(), httpErrors: [], consoleErrors: [], pageErrors: [], brokenImages: [], pendingImages: 0 };
+    if (healthPath) {
+      page.on('response', (r) => { if (r.status() >= 400 && health.httpErrors.length < 50) health.httpErrors.push({ url: r.url(), status: r.status() }); });
+      page.on('console', (m) => { if (m.type() === 'error' && health.consoleErrors.length < 50) health.consoleErrors.push(m.text().slice(0, 200)); });
+      page.on('pageerror', (e) => { if (health.pageErrors.length < 50) health.pageErrors.push(String((e && e.message) || e).slice(0, 200)); });
+    }
     await page.goto(url, { waitUntil: 'load', timeout: 45000 });
     await page.waitForTimeout(1500);
+    if (healthPath) {
+      // Scroll pass to trigger lazy loaders, then settle. A below-fold lazy image is
+      // PENDING, not broken — racing the capture caused false failures in practice.
+      try {
+        await page.evaluate(async () => {
+          const step = Math.round(window.innerHeight * 0.9) || 800;
+          for (let y = 0; y <= document.body.scrollHeight; y += step) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 90)); }
+          window.scrollTo(0, 0);
+        });
+        await page.waitForTimeout(700);
+        const imgs = await page.evaluate(() => Array.from(document.images).map((im) => ({ src: im.currentSrc || im.src, complete: im.complete, w: im.naturalWidth })));
+        // complete && naturalWidth===0 = genuinely broken; !complete = still loading (timing).
+        health.brokenImages = imgs.filter((i) => i.complete && i.w === 0 && i.src).map((i) => ({ src: i.src }));
+        health.pendingImages = imgs.filter((i) => !i.complete).length;
+      } catch (e) { health.note = `health scan incomplete: ${String((e && e.message) || e).slice(0, 150)}`; }
+    }
     await page.screenshot({ path: out, fullPage: full });
     await browserCtx.close();
+    if (healthPath) fs.writeFileSync(healthPath, JSON.stringify(health, null, 2));
     console.log(`shot ${url} -> ${out}`);
   })().catch((e) => { console.error(e.message); process.exit(1); });
 }
