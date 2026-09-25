@@ -1,5 +1,5 @@
 name: ci
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 jobs:
   smoke:
     strategy:
@@ -15,3 +15,18 @@ jobs:
         run: node test/smoke.js
       - name: doctor runs
         run: node cli.js doctor || true
+  # Manual-only: real-Chrome runtime proof for shot --health (test 12). Ordinary
+  # push/PR runs stay offline-fast; nobody pays for a browser unless it is asked for.
+  smoke-browser:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: playwright-core (driver only — the browser is the runner's system Chrome)
+        run: npm install -g playwright-core
+      - name: smoke test (browser runtime enabled)
+        run: |
+          export MYSTIC_STUDIO_CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          node test/smoke.js

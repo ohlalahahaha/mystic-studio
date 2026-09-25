@@ -69,7 +69,7 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 | `web_audit` | Crawls a whole site (default 8 pages), per-page verdicts, site SCORE, **cross-page consistency police** | no |
 | `polish` | **Autonomous loop:** review → coding runner applies fixes → delta-recheck → repeat until SHIP (round + budget capped) | runner time |
 | `taste_note` | Teach the reviewer a preference for a site; reviews also store their top fixes automatically — taste sharpens every round | no |
-| `web_shot` | Screenshots, any widths, full-page option | no |
+| `web_shot` | Screenshots, any widths, full-page option; `health: true` adds rendered-DOM page health | no |
 | `video_see` | Scene summary, timestamped timeline, transcription, quality verdict | no |
 | `video_keyframes` | N evenly-spaced frames as JPGs | no |
 | `video_gif` | Two-pass palette GIF from a video span | no |
@@ -77,6 +77,18 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 | `photo_generate` | Text → image via higgsfield | **credits** |
 | `photo_edit` | Instruction-based image edit | **credits** |
 | `studio_catalog` | List available generation models | no |
+
+### Page health (rendered-DOM truth, not impressions)
+
+A screenshot cannot prove that assets actually rendered: HTTP 200s and matching selectors
+still let a thumbnail grid fill while the hero never paints. When `web_review`, `recheck`
+and `web_audit` capture pages (and `web_shot` when you pass `health: true`), the shot
+helper also collects deterministic rendered-DOM facts into a `.health.json` sidecar next
+to each PNG: HTTP errors ≥ 400, images that loaded with zero rendered pixels (broken),
+images still pending at capture (lazy-load timing — reported separately so it is never
+confused with broken), and console/page errors. Those facts are prepended to the review
+prompt **and** appended to the returned verdict, so the ground truth survives even when
+the model wants to say SHIP.
 
 ## Three surfaces, one engine
 
