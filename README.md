@@ -59,6 +59,8 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 
 **Whole-site audits:** `mystic-studio audit https://mysite.com` crawls up to N same-host pages and judges the *site*: per-page verdicts, one score, and cross-page consistency (nav, colour, type, spacing drift between pages).
 
+**Signature treatments:** a treatment is a complete premium idiom — exact CSS tokens, the moves that spend them, and the guards that keep them tasteful — distilled from a shipped build. `mystic-studio treatments` lists them; `mystic-studio treatments golden` prints the full recipe. Build with it, then declare it: `mystic-studio review <url> --treatment golden`. The reviewer then judges *within* the idiom (a ~5% gold pixel budget is restraint, not timidity) instead of demanding generic minimalism — and still flags drift past the guards. If a page reads generic with no treatment declared, the reviewer names one in its fixes.
+
 ## Tools
 
 | Tool | What it does | Costs money? |
@@ -69,6 +71,7 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 | `web_audit` | Crawls a whole site (default 8 pages), per-page verdicts, site SCORE, **cross-page consistency police** | no |
 | `polish` | **Autonomous loop:** review → coding runner applies fixes → delta-recheck → repeat until SHIP (round + budget capped) | runner time |
 | `taste_note` | Teach the reviewer a preference for a site; reviews also store their top fixes automatically — taste sharpens every round | no |
+| `treatments` | Signature premium design idioms (tokens + moves + guards) from shipped builds; pass one to `web_review` and the verdict judges within it | no |
 | `web_shot` | Screenshots, any widths, full-page option; `health: true` adds rendered-DOM page health | no |
 | `video_see` | Scene summary, timestamped timeline, transcription, quality verdict | no |
 | `video_keyframes` | N evenly-spaced frames as JPGs | no |

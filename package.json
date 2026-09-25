@@ -1,6 +1,6 @@
 {
   "name": "mystic-studio",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Zero-dependency AI media studio: photography eye, web design review, screenshots, video intelligence — MCP server, HTTP API, and CLI in one package.",
   "license": "MIT",
   "author": "ohlalahahaha",

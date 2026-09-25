@@ -33,12 +33,24 @@ assert(/SCORE:/.test(prompts.PHOTO_LAW) && /SCORE:/.test(prompts.DESIGN_LAW), 'p
 assert(prompts.AUDIT_LAW.includes('${N}'), 'AUDIT_LAW keeps its ${N} placeholder');
 assert(/CROSS-PAGE CONSISTENCY/.test(prompts.AUDIT_LAW), 'AUDIT_LAW judges cross-page consistency');
 
-// 3. tool list: 14 tools, schema'd, neutral
+// 2b. treatments registry: recipes are complete, review brief injectable, law treatment-aware
+const treatments = require(path.join(ROOT, 'lib', 'treatments'));
+const golden = treatments.get('golden');
+assert(golden && /--gold:/.test(golden.css) && golden.moves.length === 6 && golden.guards.length >= 3, 'golden treatment complete (css + 6 moves + guards)');
+assert(treatments.get('nope') === undefined && treatments.ids().includes('golden'), 'unknown id is undefined, golden listed');
+assert(/SIGNATURE TREATMENT/.test(treatments.reviewBrief(golden)) && /5% of the pixels/.test(treatments.reviewBrief(golden)), 'review brief carries the idiom + guards');
+assert(/TREATMENT DISCIPLINE/.test(prompts.DESIGN_LAW), 'DESIGN_LAW is treatment-aware');
 const { TOOLS } = require(path.join(ROOT, 'lib', 'core'));
-assert.strictEqual(TOOLS.length, 14, '14 tools');
+
+// 3. tool list: 15 tools, schema'd, neutral
+assert.strictEqual(TOOLS.length, 15, '15 tools');
 for (const t of TOOLS) { assert(t.name && t.description && t.inputSchema, `${t.name} complete`); assert(!/Phoenix/i.test(t.description)); }
 const names = TOOLS.map((t) => t.name);
-for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate', 'web_audit', 'polish', 'taste_note']) assert(names.includes(want), `${want} present`);
+for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate', 'web_audit', 'polish', 'taste_note', 'treatments']) assert(names.includes(want), `${want} present`);
+const trTool = TOOLS.find((t) => t.name === 'treatments');
+assert(trTool.inputSchema.properties.name && !trTool.inputSchema.required, 'treatments name is optional');
+assert(TOOLS.find((t) => t.name === 'web_review').inputSchema.properties.treatment, 'web_review accepts a declared treatment');
+assert(/treatment/.test(TOOLS.find((t) => t.name === 'web_review').description), 'web_review mentions the treatment hook');
 assert(names.some((n) => /generate|edit/.test(n) && TOOLS.find((t) => t.name === n).description.includes('CREDITS')), 'paid tools labelled');
 
 // 4. MCP handshake over stdio
@@ -49,7 +61,7 @@ const hs = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], { input: 
 const lines = hs.stdout.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
 assert(lines.find((m) => m.id === 1 && m.result && m.result.serverInfo), 'initialize answered');
 const toolsMsg = lines.find((m) => m.id === 2);
-assert(toolsMsg.result.tools.length === 14, 'tools/list answered with 14');
+assert(toolsMsg.result.tools.length === 15, 'tools/list answered with 15');
 
 // 5. unknown tool -> clean MCP error
 const bad = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], {
@@ -57,6 +69,17 @@ const bad = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], {
   encoding: 'utf8', timeout: 20000,
 });
 assert(/unknown tool/.test(bad.stdout), 'unknown tool errors cleanly');
+
+// 5b. treatments over MCP: list, full recipe, clean error on unknown id
+const trCall = JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'treatments', arguments: {} } }) + '\n' +
+  JSON.stringify({ jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'treatments', arguments: { name: 'golden' } } }) + '\n' +
+  JSON.stringify({ jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'treatments', arguments: { name: 'nope' } } }) + '\n';
+const ts = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], { input: trCall, encoding: 'utf8', timeout: 20000 });
+const tlines = ts.stdout.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+const tText = (id) => tlines.find((m) => m.id === id).result.content[0].text;
+assert(/The Golden Treatment/.test(tText(3)), 'treatments list served over MCP');
+assert(/TOKENS:/.test(tText(4)) && /GUARDS:/.test(tText(4)) && /{"treatment":"golden"}/.test(tText(4)), 'full golden recipe served over MCP');
+assert(/unknown treatment/.test(tText(5)), 'unknown treatment errors cleanly over MCP');
 
 // 6. doctor runs offline (may report MISSING — must not crash)
 fs.writeFileSync(path.join(HERE, 'args-empty.json'), '{}');

@@ -16,7 +16,7 @@ function usage() {
   mystic-studio doctor                         check every dependency, show fixes
   mystic-studio see <image> [--focus "..."] [--deep]
   mystic-studio shot <url> [--widths 1280,390] [--full]
-  mystic-studio review <url> [--brief "..."] [--deep]
+  mystic-studio review <url> [--brief "..."] [--treatment golden] [--deep]
   mystic-studio recheck [session-id] [--url u] [--image p] [--deep]
   mystic-studio generate "<prompt>" [--ar 16:9] [--model m]     spends credits
   mystic-studio edit <image> -p "<instruction>"                 spends credits
@@ -27,6 +27,7 @@ function usage() {
   mystic-studio audit <url> [--max-pages 8]     whole-site crawl + consistency
   mystic-studio polish --url u --repo dir       autonomous fix loop until SHIP
   mystic-studio taste [target]                  show learned taste notes
+  mystic-studio treatments [id]                 premium design idioms (golden…)
   mystic-studio note --target u --note "..."    teach the reviewer
   mystic-studio serve                           start the HTTP job API
 
@@ -59,6 +60,14 @@ function main() {
     case 'see': name = 'photo_see'; args.image = pos[0]; break;
     case 'shot': name = 'web_shot'; args.url = pos[0]; if (args.widths && typeof args.widths === 'string') args.widths = args.widths.split(',').map(Number); break;
     case 'review': name = 'web_review'; args.url = pos[0]; break;
+    case 'treatments': {
+      const T = require('./lib/treatments');
+      if (!pos[0]) { console.log(T.formatAll()); return; }
+      const t = T.get(pos[0]);
+      if (!t) { console.error(`unknown treatment '${pos[0]}' — known: ${T.ids().join(', ')}`); process.exit(2); return; }
+      console.log(T.format(t));
+      return;
+    }
     case 'recheck': name = 'recheck'; if (pos[0] && !pos[0].startsWith('-')) args.session = pos[0]; break;
     case 'generate': name = 'photo_generate'; args.prompt = pos[0]; break;
     case 'edit': name = 'photo_edit'; args.image = pos[0]; break;
