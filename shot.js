@@ -101,9 +101,10 @@ function main() {
   const arg = (n) => { const i = process.argv.indexOf(n); return i > -1 ? process.argv[i + 1] : null; };
   const width = Number(arg('--w')) || 1280;
   const height = Number(arg('--h')) || 900;
+  const dpr = Math.max(1, Math.min(4, Number(arg('--dpr')) || 1));
   const full = process.argv.includes('--full');
   const healthPath = arg('--health');
-  if (!url || !out) { console.error('usage: shot.js <url> <out.png> [--w 1280] [--h 900] [--full] [--health out.health.json]'); process.exit(2); }
+  if (!url || !out) { console.error('usage: shot.js <url> <out.png> [--w 1280] [--h 900] [--dpr 1] [--full] [--health out.health.json]'); process.exit(2); }
 
   const { pw, browser } = check();
   if (!pw) { console.error('playwright-core not found — npm i -g playwright-core, or set PLAYWRIGHT_CORE'); process.exit(1); }
@@ -112,7 +113,7 @@ function main() {
   const { chromium } = require(pw);
   (async () => {
     const browserCtx = await chromium.launch({ headless: true, executablePath: browser });
-    const page = await browserCtx.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
+    const page = await browserCtx.newPage({ viewport: { width, height }, deviceScaleFactor: dpr });
     // Page health: rendered-DOM facts a screenshot alone cannot prove. Listeners attach
     // BEFORE goto so early 4xx/5xx and console errors are caught, not just steady-state.
     const health = { url, at: new Date().toISOString(), httpErrors: [], consoleErrors: [], pageErrors: [], brokenImages: [], pendingImages: 0 };

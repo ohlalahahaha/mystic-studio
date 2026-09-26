@@ -58,7 +58,7 @@ function main() {
   switch (verb) {
     case 'doctor': name = 'studio_doctor'; break;
     case 'see': name = 'photo_see'; args.image = pos[0]; break;
-    case 'shot': name = 'web_shot'; args.url = pos[0]; if (args.widths && typeof args.widths === 'string') args.widths = args.widths.split(',').map(Number); break;
+    case 'shot': name = 'web_shot'; args.url = pos[0]; if (args.widths) { if (typeof args.widths === 'number') args.widths = [args.widths]; else if (typeof args.widths === 'string') args.widths = args.widths.split(',').map(Number); } break;
     case 'review': name = 'web_review'; args.url = pos[0]; break;
     case 'treatments': {
       const T = require('./lib/treatments');
