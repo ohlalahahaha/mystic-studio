@@ -67,6 +67,8 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 
 **Optional motion sources:** `mystic-studio motion` lists Lenis, GSAP, Vanta and React Bits with upstream links, integration notes and guards. Select a source in an existing website fix loop with `mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --motion gsap` (or `--motion gsap,lenis`). Studio passes those source notes to its existing coding runner only when a top fix calls for animation. It does not install packages globally or copy components into Studio. Lenis smooths scrolling; GSAP handles timelines and scroll animation; Vanta supplies WebGL/p5 backgrounds; React Bits is for React projects. Use static fallbacks, reduced-motion handling, mobile performance checks and the upstream licenses. React Bits' MIT + Commons Clause permits use in an application but restricts resale or redistribution of the components themselves. Screenshot review checks rendered frames and page health; it cannot prove animation timing or smoothness.
 
+**Runnable prototype:** `mystic-studio motion-build --headline "A considered collection" --description "Original objects for everyday living." --action "Enquire" --destination "mailto:studio@example.com" --motion gsap,lenis` exports one responsive HTML section in the configured output directory. It has an original CSS visual, a real CTA, static fallback, reduced-motion handling, and optional GSAP/Lenis scripts loaded from pinned public CDNs. Identical inputs overwrite the same filename. Render it at 1440, 390 and 320 pixels, then check its output and page health before adapting it to a real brief. This is a prototype, not a reference-faithful customer deliverable. Vanta and React Bits remain project-specific because they require a WebGL dependency or a React project; `motion` shows their integration guards.
+
 ## Tools
 
 | Tool | What it does | Costs money? |
@@ -79,6 +81,7 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 | `taste_note` | Teach the reviewer a preference for a site; reviews also store their top fixes automatically — taste sharpens every round | no |
 | `treatments` | Signature premium design idioms (tokens + moves + guards) from shipped builds; pass one to `web_review` and the verdict judges within it | no |
 | `motion_assets` | Optional Lenis, GSAP, Vanta and React Bits recipes for website fixes; `polish` accepts `motion` ids | no |
+| `motion_prototype` | Export an original responsive HTML section with optional GSAP/Lenis motion and static fallback | no |
 | `web_shot` | Screenshots, any widths, full-page option; `health: true` adds rendered-DOM page health | no |
 | `video_see` | Scene summary, timestamped timeline, transcription, quality verdict | no |
 | `video_keyframes` | N evenly-spaced frames as JPGs | no |

@@ -15,6 +15,16 @@ This public starter shows how to prepare a bounded visual job and check a real r
 
 The free material includes templates, the example and documented local commands. It does not include hosting, a managed job, paid generation, provider credits, a free-job token, commercial licenses to third-party assets or a promise of automatic repair. The service scope and any price are agreed separately. Never put an API key or private customer material in a public repository.
 
+Studio also exports a small original website motion prototype without a provider key:
+
+```sh
+mystic-studio motion-build --headline "A considered collection" --description "Original objects for everyday living." --action "Enquire" --destination "mailto:studio@example.com" --motion gsap,lenis
+```
+
+It saves one deterministic HTML file under Studio's configured output directory; rerunning the same input overwrites that file. The page works without JavaScript and respects reduced motion. Optional GSAP and Lenis load from public CDNs; review their upstream licenses and check offline, mobile and runtime behaviour before using a result in a real website. Vanta requires a WebGL project and React Bits requires a React project, so this standalone HTML export does not pretend to include them. The four source notes are in `mystic-studio motion`.
+
+`demo/motion.html` is a checked-in original output with a working `#details` action. The local render script includes it at 1440, 390 and 320 pixels alongside before/after. A screenshot captures one frame only; inspect motion and the static fallback in a browser before client delivery.
+
 ## Repeatable sample
 
 The two HTML files under `demo/` contain the **same made-up headline and action**. `before.html` deliberately has cramped type, weak contrast and a fixed width that overflows on phones. `after.html` uses the locked specification: two type families, clear hierarchy, one action and a fluid layout. Inspect the source and compare the renders; this is a real source edit, not an AI-generated customer result.
@@ -26,7 +36,7 @@ npm test
 node workbox-starter/render-demo.mjs
 ```
 
-`render-demo.mjs` serves only the two local files on loopback, calls the existing `shot.js`, and overwrites `workbox-starter/output/{before,after}-{1440,390,320}.png` plus health sidecars. It needs a local Chromium and Playwright, as `mystic-studio doctor` reports. The output directory is ignored by Git; running it twice does not add source files. No provider call or key is needed for these captures. Review the actual PNGs before accepting the change.
+`render-demo.mjs` serves only the three local files on loopback, calls the existing `shot.js`, and overwrites `workbox-starter/output/{before,after,motion}-{1440,390,320}.png` plus health sidecars. It needs a local Chromium and Playwright, as `mystic-studio doctor` reports. The output directory is ignored by Git; running it twice does not add source files. No provider call or key is needed for these captures. Review the actual PNGs before accepting the change.
 
 For a job on your own URL, use the existing tools after you have permission to process its assets:
 
