@@ -25,9 +25,10 @@ function usage() {
   mystic-studio vkey <video> [--count 8]
   mystic-studio vgif <video> [--start 0] [--sec 5] [--width 480]
   mystic-studio audit <url> [--max-pages 8]     whole-site crawl + consistency
-  mystic-studio polish --url u --repo dir       autonomous fix loop until SHIP
+  mystic-studio polish --url u --repo dir [--motion gsap,lenis]  fix loop
   mystic-studio taste [target]                  show learned taste notes
   mystic-studio treatments [id]                 premium design idioms (golden…)
+  mystic-studio motion [id[,id]]                 optional frontend animation sources
   mystic-studio note --target u --note "..."    teach the reviewer
   mystic-studio serve                           start the HTTP job API
 
@@ -68,6 +69,7 @@ function main() {
       console.log(T.format(t));
       return;
     }
+    case 'motion': name = 'motion_assets'; if (pos[0]) args.name = pos[0]; break;
     case 'recheck': name = 'recheck'; if (pos[0] && !pos[0].startsWith('-')) args.session = pos[0]; break;
     case 'generate': name = 'photo_generate'; args.prompt = pos[0]; break;
     case 'edit': name = 'photo_edit'; args.image = pos[0]; break;
