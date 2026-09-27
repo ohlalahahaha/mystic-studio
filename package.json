@@ -12,6 +12,7 @@
     "mystic-coding-room": "coding-room.js"
   },
   "files": ["lib", "test", "server.js", "http.js", "run.js", "cli.js", "shot.js", "coding-room.js", "README.md", "SECURITY.md", "config.example.json", ".env.example"],
-  "scripts": { "test": "node test/smoke.js" },
-  "keywords": ["mcp", "model-context-protocol", "ai-tools", "photography", "web-design", "video", "screenshots", "critique"]
+  "scripts": { "test": "node test/smoke.js", "bench": "vitest bench --run" },
+  "keywords": ["mcp", "model-context-protocol", "ai-tools", "photography", "web-design", "video", "screenshots", "critique"],
+  "devDependencies": { "@codspeed/vitest-plugin": "^5.7.1", "vitest": "^4.1.11" }
 }
