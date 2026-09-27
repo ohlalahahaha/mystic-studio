@@ -12,6 +12,6 @@
     "mystic-coding-room": "coding-room.js"
   },
   "files": ["lib", "test", "server.js", "http.js", "run.js", "cli.js", "shot.js", "coding-room.js", "README.md", "SECURITY.md", "config.example.json", ".env.example"],
-  "scripts": { "test": "node test/smoke.js" },
+  "scripts": { "test": "node test/smoke.js && node test/gemini-image.js" },
   "keywords": ["mcp", "model-context-protocol", "ai-tools", "photography", "web-design", "video", "screenshots", "critique"]
 }

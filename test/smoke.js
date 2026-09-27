@@ -154,7 +154,7 @@ fs.writeFileSync(glmSig, '<html>not an image</html>');
 assert(!glm.isImageFile(glmSig), 'html refused by signature check');
 fs.unlinkSync(glmSig);
 const pgTool = TOOLS.find((t) => t.name === 'photo_generate');
-assert.deepStrictEqual(pgTool.inputSchema.properties.provider.enum, ['higgsfield', 'glm'], 'provider enum on photo_generate');
+assert.deepStrictEqual(pgTool.inputSchema.properties.provider.enum, ['higgsfield', 'glm', 'gemini'], 'provider enum on photo_generate');
 assert(pgTool.inputSchema.properties.size && pgTool.inputSchema.properties.quality, 'glm size/quality in schema');
 assert(/\$0\.015/.test(pgTool.description) && /SPENDS/.test(pgTool.description) && /No silent provider fallback/.test(pgTool.description), 'paid + no-fallback labelled');
 assert(TOOLS.find((t) => t.name === 'photo_edit').inputSchema.properties.provider, 'photo_edit accepts provider (to reject glm explicitly)');

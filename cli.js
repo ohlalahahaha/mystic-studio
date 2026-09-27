@@ -20,7 +20,9 @@ function usage() {
   mystic-studio recheck [session-id] [--url u] [--image p] [--deep]
   mystic-studio generate "<prompt>" [--ar 16:9] [--model m]     spends credits
   mystic-studio generate "<prompt>" --provider glm [--size 1280x1280] [--quality hd]  paid API ($0.015/image)
+  mystic-studio generate --provider gemini --prompt "<p>" [--ar 16:9]  paid API (native Nano Banana)
   mystic-studio edit <image> -p "<instruction>"                 spends credits
+  mystic-studio edit <image> -p "<instruction>" --provider gemini  paid API (native Nano Banana edit)
   mystic-studio catalog [kind]
   mystic-studio vsee <video> [--focus "..."] [--deep]
   mystic-studio vkey <video> [--count 8]
@@ -49,6 +51,7 @@ function main() {
     const a = argv[i];
     if (a === '--deep') { args.deep = true; continue; }
     if (a === '--full' || a === '--full_page') { args.full_page = true; continue; }
+    if (a === '-p') { args.p = argv[++i]; continue; }
     if (a.startsWith('--')) {
       const k = a.slice(2), v = argv[++i];
       args[k] = BOOL.has(k) ? true : (/^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v);
@@ -74,8 +77,8 @@ function main() {
     case 'motion': name = 'motion_assets'; if (pos[0]) args.name = pos[0]; break;
     case 'motion-build': name = 'motion_prototype'; break;
     case 'recheck': name = 'recheck'; if (pos[0] && !pos[0].startsWith('-')) args.session = pos[0]; break;
-    case 'generate': name = 'photo_generate'; args.prompt = pos[0]; break;
-    case 'edit': name = 'photo_edit'; args.image = pos[0]; break;
+    case 'generate': name = 'photo_generate'; if (args.prompt === undefined) args.prompt = pos[0]; break;
+    case 'edit': name = 'photo_edit'; if (args.image === undefined) args.image = pos[0]; break;
     case 'catalog': name = 'studio_catalog'; if (pos[0]) args.kind = pos[0]; break;
     case 'vsee': name = 'video_see'; args.video = pos[0]; break;
     case 'vkey': name = 'video_keyframes'; args.video = pos[0]; break;
