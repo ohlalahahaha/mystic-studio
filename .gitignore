@@ -5,3 +5,4 @@ mystic-studio.config.json
 *.log
 .DS_Store
 test-out/
+workbox-starter/output/

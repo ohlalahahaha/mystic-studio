@@ -1,0 +1,12 @@
+{
+  "job_name": "example-project",
+  "deliverable": "One responsive visual asset",
+  "source_assets": [
+    { "path": "assets/source.ext", "sha256": "REPLACE_WITH_SHA256", "rights": "Confirm permission to use" }
+  ],
+  "reference": { "path": "assets/reference.ext", "sha256": "REPLACE_WITH_SHA256", "priority": "Approved layout and identity" },
+  "sizes_px": [1440, 390, 320],
+  "acceptance": ["Identity and wording match approved sources", "Readable at every size", "One working primary action", "No broken images or console errors"],
+  "max_repair_rounds": 2,
+  "export": ["source", "rendered_proof", "final_assets", "limitations"]
+}

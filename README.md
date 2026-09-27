@@ -1,5 +1,9 @@
 # mystic-studio
 
+## Phoenix Digital — Visual Production Workbox Starter
+
+The [public Workbox Starter](workbox-starter/README.md) contains a reusable brief, design specification, a generic before/after fixture, and a repeatable render/check workflow. It uses this Studio's existing review and screenshot tools; it is not a hosted visual-job trial.
+
 **A zero-dependency AI media studio your coding agent can actually use.**
 
 Give Claude, ChatGPT, Codex, Gemini CLI or any MCP client three things it never had:
