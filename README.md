@@ -1,6 +1,10 @@
 # mystic-studio
 
-## Phoenix Digital — Visual Production Workbox Starter
+## Phoenix Digital — Visual Production Workbox
+
+The [Visual Production Workbox](https://phoenix-digital-systems.mysticwellnesssydney.workers.dev/workbox) is the done-for-you commercial service built around Mystic Studio: visual finishes, campaign sets and existing-page refinements. It uses a scoped quote and the existing Phoenix Digital contact route. It is not a self-service generation subscription.
+
+### Public Starter
 
 The [public Workbox Starter](workbox-starter/README.md) contains a reusable brief, design specification, a generic before/after fixture, and a repeatable render/check workflow. It uses this Studio's existing review and screenshot tools; it is not a hosted visual-job trial.
 
