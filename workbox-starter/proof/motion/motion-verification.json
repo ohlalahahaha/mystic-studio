@@ -1,0 +1,141 @@
+{
+  "sourceSha256": "b679e46816417e7d4d5587d14811316cd689a8025a32f1cdca2562d0225629be",
+  "librarySource": "pinned npm cache; not a CDN reachability test",
+  "results": [
+    {
+      "mode": "motion",
+      "width": 1440,
+      "documentWidth": 1440,
+      "headline": "Objects with room to breathe",
+      "actionHeight": 50.34375,
+      "gsap": "3.15.0",
+      "lenis": true,
+      "smoothActive": true,
+      "errors": [],
+      "expectedOfflineFailures": [],
+      "cta": "passed",
+      "screenshot": "motion-motion-1440.png"
+    },
+    {
+      "mode": "motion",
+      "width": 390,
+      "documentWidth": 390,
+      "headline": "Objects with room to breathe",
+      "actionHeight": 50.34375,
+      "gsap": "3.15.0",
+      "lenis": true,
+      "smoothActive": true,
+      "errors": [],
+      "expectedOfflineFailures": [],
+      "cta": "passed",
+      "screenshot": "motion-motion-390.png"
+    },
+    {
+      "mode": "motion",
+      "width": 320,
+      "documentWidth": 320,
+      "headline": "Objects with room to breathe",
+      "actionHeight": 50.34375,
+      "gsap": "3.15.0",
+      "lenis": true,
+      "smoothActive": true,
+      "errors": [],
+      "expectedOfflineFailures": [],
+      "cta": "passed",
+      "screenshot": "motion-motion-320.png"
+    },
+    {
+      "mode": "reduced",
+      "width": 1440,
+      "documentWidth": 1440,
+      "headline": "Objects with room to breathe",
+      "actionHeight": 50.34375,
+      "gsap": "3.15.0",
+      "lenis": true,
+      "smoothActive": false,
+      "errors": [],
+      "expectedOfflineFailures": [],
+      "cta": "passed",
+      "screenshot": "motion-reduced-1440.png"
+    },
+    {
+      "mode": "reduced",
+      "width": 390,
+      "documentWidth": 390,
+      "headline": "Objects with room to breathe",
+      "actionHeight": 50.34375,
+      "gsap": "3.15.0",
+      "lenis": true,
+      "smoothActive": false,
+      "errors": [],
+      "expectedOfflineFailures": [],
+      "cta": "passed",
+      "screenshot": "motion-reduced-390.png"
+    },
+    {
+      "mode": "reduced",
+      "width": 320,
+      "documentWidth": 320,
+      "headline": "Objects with room to breathe",
+      "actionHeight": 50.34375,
+      "gsap": "3.15.0",
+      "lenis": true,
+      "smoothActive": false,
+      "errors": [],
+      "expectedOfflineFailures": [],
+      "cta": "passed",
+      "screenshot": "motion-reduced-320.png"
+    },
+    {
+      "mode": "offline",
+      "width": 1440,
+      "documentWidth": 1440,
+      "headline": "Objects with room to breathe",
+      "actionHeight": 50.34375,
+      "gsap": null,
+      "lenis": false,
+      "smoothActive": false,
+      "errors": [],
+      "expectedOfflineFailures": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "cta": "passed",
+      "screenshot": "motion-offline-1440.png"
+    },
+    {
+      "mode": "offline",
+      "width": 390,
+      "documentWidth": 390,
+      "headline": "Objects with room to breathe",
+      "actionHeight": 50.34375,
+      "gsap": null,
+      "lenis": false,
+      "smoothActive": false,
+      "errors": [],
+      "expectedOfflineFailures": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "cta": "passed",
+      "screenshot": "motion-offline-390.png"
+    },
+    {
+      "mode": "offline",
+      "width": 320,
+      "documentWidth": 320,
+      "headline": "Objects with room to breathe",
+      "actionHeight": 50.34375,
+      "gsap": null,
+      "lenis": false,
+      "smoothActive": false,
+      "errors": [],
+      "expectedOfflineFailures": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "cta": "passed",
+      "screenshot": "motion-offline-320.png"
+    }
+  ]
+}
