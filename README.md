@@ -65,6 +65,8 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 
 **Signature treatments:** a treatment is a complete premium idiom — exact CSS tokens, the moves that spend them, and the guards that keep them tasteful — distilled from a shipped build. `mystic-studio treatments` lists them; `mystic-studio treatments golden` prints the full recipe. Build with it, then declare it: `mystic-studio review <url> --treatment golden`. The reviewer then judges *within* the idiom (a ~5% gold pixel budget is restraint, not timidity) instead of demanding generic minimalism — and still flags drift past the guards. If a page reads generic with no treatment declared, the reviewer names one in its fixes.
 
+**Optional motion sources:** `mystic-studio motion` lists Lenis, GSAP, Vanta and React Bits with upstream links, integration notes and guards. Select a source in an existing website fix loop with `mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --motion gsap` (or `--motion gsap,lenis`). Studio passes those source notes to its existing coding runner only when a top fix calls for animation. It does not install packages globally or copy components into Studio. Lenis smooths scrolling; GSAP handles timelines and scroll animation; Vanta supplies WebGL/p5 backgrounds; React Bits is for React projects. Use static fallbacks, reduced-motion handling, mobile performance checks and the upstream licenses. React Bits' MIT + Commons Clause permits use in an application but restricts resale or redistribution of the components themselves. Screenshot review checks rendered frames and page health; it cannot prove animation timing or smoothness.
+
 ## Tools
 
 | Tool | What it does | Costs money? |
@@ -76,6 +78,7 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 | `polish` | **Autonomous loop:** review → coding runner applies fixes → delta-recheck → repeat until SHIP (round + budget capped) | runner time |
 | `taste_note` | Teach the reviewer a preference for a site; reviews also store their top fixes automatically — taste sharpens every round | no |
 | `treatments` | Signature premium design idioms (tokens + moves + guards) from shipped builds; pass one to `web_review` and the verdict judges within it | no |
+| `motion_assets` | Optional Lenis, GSAP, Vanta and React Bits recipes for website fixes; `polish` accepts `motion` ids | no |
 | `web_shot` | Screenshots, any widths, full-page option; `health: true` adds rendered-DOM page health | no |
 | `video_see` | Scene summary, timestamped timeline, transcription, quality verdict | no |
 | `video_keyframes` | N evenly-spaced frames as JPGs | no |

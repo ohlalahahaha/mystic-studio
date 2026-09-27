@@ -42,15 +42,16 @@ assert(/SIGNATURE TREATMENT/.test(treatments.reviewBrief(golden)) && /5% of the 
 assert(/TREATMENT DISCIPLINE/.test(prompts.DESIGN_LAW), 'DESIGN_LAW is treatment-aware');
 const { TOOLS } = require(path.join(ROOT, 'lib', 'core'));
 
-// 3. tool list: 15 tools, schema'd, neutral
-assert.strictEqual(TOOLS.length, 15, '15 tools');
+// 3. tool list: 16 tools, schema'd, neutral
+assert.strictEqual(TOOLS.length, 16, '16 tools');
 for (const t of TOOLS) { assert(t.name && t.description && t.inputSchema, `${t.name} complete`); assert(!/Phoenix/i.test(t.description)); }
 const names = TOOLS.map((t) => t.name);
-for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate', 'web_audit', 'polish', 'taste_note', 'treatments']) assert(names.includes(want), `${want} present`);
+for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate', 'web_audit', 'polish', 'taste_note', 'treatments', 'motion_assets']) assert(names.includes(want), `${want} present`);
 const trTool = TOOLS.find((t) => t.name === 'treatments');
 assert(trTool.inputSchema.properties.name && !trTool.inputSchema.required, 'treatments name is optional');
 assert(TOOLS.find((t) => t.name === 'web_review').inputSchema.properties.treatment, 'web_review accepts a declared treatment');
 assert(/treatment/.test(TOOLS.find((t) => t.name === 'web_review').description), 'web_review mentions the treatment hook');
+assert(TOOLS.find((t) => t.name === 'polish').inputSchema.properties.motion, 'polish accepts optional motion selection');
 assert(names.some((n) => /generate|edit/.test(n) && TOOLS.find((t) => t.name === n).description.includes('CREDITS')), 'paid tools labelled');
 
 // 4. MCP handshake over stdio
@@ -61,7 +62,7 @@ const hs = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], { input: 
 const lines = hs.stdout.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
 assert(lines.find((m) => m.id === 1 && m.result && m.result.serverInfo), 'initialize answered');
 const toolsMsg = lines.find((m) => m.id === 2);
-assert(toolsMsg.result.tools.length === 15, 'tools/list answered with 15');
+assert(toolsMsg.result.tools.length === 16, 'tools/list answered with 16');
 
 // 5. unknown tool -> clean MCP error
 const bad = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], {
@@ -80,6 +81,32 @@ const tText = (id) => tlines.find((m) => m.id === id).result.content[0].text;
 assert(/The Golden Treatment/.test(tText(3)), 'treatments list served over MCP');
 assert(/TOKENS:/.test(tText(4)) && /GUARDS:/.test(tText(4)) && /{"treatment":"golden"}/.test(tText(4)), 'full golden recipe served over MCP');
 assert(/unknown treatment/.test(tText(5)), 'unknown treatment errors cleanly over MCP');
+
+// 5c. motion catalog and the opt-in polish runner contract share one registry
+const assets = require(path.join(ROOT, 'lib', 'motion-assets'));
+assert.deepStrictEqual(assets.ids(), ['lenis', 'gsap', 'vanta', 'react-bits']);
+assert.strictEqual(assets.select('gsap,gsap,lenis').length, 2, 'duplicate selections collapse');
+assert.throws(() => assets.select('gsap,unknown'), /unknown motion asset/);
+assert(/Commons Clause/.test(assets.format('react-bits')) && /static fallback/.test(assets.format('vanta')), 'license and performance guards included');
+const motionCall = JSON.stringify({ jsonrpc: '2.0', id: 6, method: 'tools/call', params: { name: 'motion_assets', arguments: { name: 'gsap,lenis' } } }) + '\n';
+const ms = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], { input: motionCall, encoding: 'utf8', timeout: 20000 });
+const mline = JSON.parse(ms.stdout.trim());
+assert(/GSAP/.test(mline.result.content[0].text) && /Lenis/.test(mline.result.content[0].text), 'selected recipes served over MCP');
+const motionCli = spawnSync(process.execPath, [path.join(ROOT, 'cli.js'), 'motion', 'react-bits'], { encoding: 'utf8', timeout: 20000 });
+assert.strictEqual(motionCli.status, 0);
+assert(/React projects only/.test(motionCli.stdout), 'CLI uses same registry');
+const { polish } = require(path.join(ROOT, 'lib', 'polish'));
+let contract = '';
+const fakeApi = {
+  newId: () => 'test', saveStep: () => {},
+  review: () => 'VERDICT: NEEDS ATTENTION\nTOP 3 FIXES:\n- Add a purposeful hero animation',
+  runContract: (_repo, _profile, body) => { contract = body; return { verdict: 'NO-GO' }; },
+  delta: () => { throw new Error('should stop before delta'); },
+};
+polish({}, { url: 'https://example.com', repo: '/tmp/site', motion: 'gsap,lenis', maxRounds: 1 }, fakeApi);
+assert(/OPTIONAL MOTION SOURCES/.test(contract) && /github.com\/greensock\/GSAP/.test(contract) && /reduced motion/.test(contract), 'selected sources reach the coding runner contract');
+assert(!/react-bits/.test(contract), 'unselected source excluded');
+assert.throws(() => polish({}, { motion: 'gsap,unknown' }, fakeApi), /unknown motion asset/, 'invalid selection fails before running');
 
 // 6. doctor runs offline (may report MISSING — must not crash)
 fs.writeFileSync(path.join(HERE, 'args-empty.json'), '{}');
