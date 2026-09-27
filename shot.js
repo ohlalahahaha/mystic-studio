@@ -114,9 +114,13 @@ function main() {
   (async () => {
     const browserCtx = await chromium.launch({ headless: true, executablePath: browser });
     const page = await browserCtx.newPage({ viewport: { width, height }, deviceScaleFactor: dpr });
+    const assetCache = process.env.MYSTIC_STUDIO_ASSET_CACHE ? JSON.parse(fs.readFileSync(process.env.MYSTIC_STUDIO_ASSET_CACHE, 'utf8')) : {};
+    for (const [url, file] of Object.entries(assetCache)) {
+      await page.route(url, (route) => route.fulfill({ path: file, contentType: 'application/javascript' }));
+    }
     // Page health: rendered-DOM facts a screenshot alone cannot prove. Listeners attach
     // BEFORE goto so early 4xx/5xx and console errors are caught, not just steady-state.
-    const health = { url, at: new Date().toISOString(), httpErrors: [], consoleErrors: [], pageErrors: [], brokenImages: [], pendingImages: 0 };
+    const health = { url, at: new Date().toISOString(), cachedAssetUrls: Object.keys(assetCache), httpErrors: [], consoleErrors: [], pageErrors: [], brokenImages: [], pendingImages: 0 };
     if (healthPath) {
       page.on('response', (r) => { if (r.status() >= 400 && health.httpErrors.length < 50) health.httpErrors.push({ url: r.url(), status: r.status() }); });
       page.on('console', (m) => { if (m.type() === 'error' && health.consoleErrors.length < 50) health.consoleErrors.push(m.text().slice(0, 200)); });

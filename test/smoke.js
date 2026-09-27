@@ -12,6 +12,14 @@ const assert = require('assert');
 const HERE = __dirname;
 const ROOT = path.join(HERE, '..');
 
+// Exercise the actual Starter HTTP routes without needing a browser or provider.
+const renderDemo = path.join(ROOT, 'workbox-starter', 'render-demo.mjs');
+if (fs.existsSync(renderDemo)) {
+  const routes = spawnSync(process.execPath, [renderDemo, '--check'], { encoding: 'utf8', timeout: 20000 });
+  assert.strictEqual(routes.status, 0, routes.stderr || routes.stdout);
+  assert(/all fixture routes served correctly/.test(routes.stdout), 'Starter routes are executable');
+}
+
 // 1. config loads with defaults, no keys required
 const cfg = require(path.join(ROOT, 'lib', 'config'));
 const c = cfg.load();

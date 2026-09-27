@@ -38,6 +38,10 @@ node workbox-starter/render-demo.mjs
 
 `render-demo.mjs` serves only the three local files on loopback, calls the existing `shot.js`, and overwrites `workbox-starter/output/{before,after,motion}-{1440,390,320}.png` plus health sidecars. It needs a local Chromium and Playwright, as `mystic-studio doctor` reports. The output directory is ignored by Git; running it twice does not add source files. No provider call or key is needed for these captures. Review the actual PNGs before accepting the change.
 
+For a Linux x64 cloud workspace without Chrome, the isolated `render-env/` package provides pinned Chromium and Playwright dependencies: run `npm ci --prefix workbox-starter/render-env`, then `npm run render --prefix workbox-starter/render-env`. It requires Node 22.17+ and system fonts. The browser is extracted into an ignored local cache; Studio's runtime dependency list stays unchanged. This environment serves the exact pinned GSAP/Lenis npm files to their declared script URLs for deterministic offline capture. Health files explicitly list these cached URLs; this proves the local library runtime, not CDN reachability. Other screenshot callers can opt into a URL-to-local-JavaScript manifest with `MYSTIC_STUDIO_ASSET_CACHE`. `node workbox-starter/render-demo.mjs --check` verifies all local fixture routes without launching a browser.
+
+[Verified motion proof](proof/motion/README.md) includes browser screenshots and results for all three widths in normal, reduced-motion and offline modes.
+
 For a job on your own URL, use the existing tools after you have permission to process its assets:
 
 ```sh

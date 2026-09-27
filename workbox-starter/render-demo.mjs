@@ -7,7 +7,11 @@ import { spawn } from 'node:child_process';
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, 'output');
 mkdirSync(out, { recursive: true });
-const files = new Map(['/before', join(here, 'demo/before.html')], ['/after', join(here, 'demo/after.html')], ['/motion', join(here, 'demo/motion.html')]);
+const files = new Map([
+  ['/before', join(here, 'demo/before.html')],
+  ['/after', join(here, 'demo/after.html')],
+  ['/motion', join(here, 'demo/motion.html')],
+]);
 const server = http.createServer((req, res) => {
   const file = files.get(req.url);
   if (!file) { res.writeHead(404); res.end('Not found'); return; }
@@ -17,6 +21,13 @@ const server = http.createServer((req, res) => {
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const port = server.address().port;
 try {
+  if (process.argv.includes('--check')) {
+    for (const [route, file] of files) {
+      const response = await fetch(`http://127.0.0.1:${port}${route}`);
+      if (!response.ok || await response.text() !== readFileSync(file, 'utf8')) throw new Error(`Fixture route failed: ${route}`);
+    }
+    console.log('render-demo: all fixture routes served correctly');
+  } else {
   for (const name of ['before', 'after', 'motion']) for (const width of [1440, 390, 320]) {
     const output = join(out, `${name}-${width}.png`);
     const result = await new Promise((resolve, reject) => {
@@ -28,5 +39,6 @@ try {
     });
     if (result.status !== 0) throw new Error(`Capture failed for ${name}/${width}: ${result.message.slice(0, 400)}`);
     console.log(output);
+  }
   }
 } finally { server.close(); }
