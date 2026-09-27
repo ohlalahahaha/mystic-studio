@@ -42,11 +42,11 @@ assert(/SIGNATURE TREATMENT/.test(treatments.reviewBrief(golden)) && /5% of the 
 assert(/TREATMENT DISCIPLINE/.test(prompts.DESIGN_LAW), 'DESIGN_LAW is treatment-aware');
 const { TOOLS } = require(path.join(ROOT, 'lib', 'core'));
 
-// 3. tool list: 16 tools, schema'd, neutral
-assert.strictEqual(TOOLS.length, 16, '16 tools');
+// 3. tool list: 17 tools, schema'd, neutral
+assert.strictEqual(TOOLS.length, 17, '17 tools');
 for (const t of TOOLS) { assert(t.name && t.description && t.inputSchema, `${t.name} complete`); assert(!/Phoenix/i.test(t.description)); }
 const names = TOOLS.map((t) => t.name);
-for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate', 'web_audit', 'polish', 'taste_note', 'treatments', 'motion_assets']) assert(names.includes(want), `${want} present`);
+for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate', 'web_audit', 'polish', 'taste_note', 'treatments', 'motion_assets', 'motion_prototype']) assert(names.includes(want), `${want} present`);
 const trTool = TOOLS.find((t) => t.name === 'treatments');
 assert(trTool.inputSchema.properties.name && !trTool.inputSchema.required, 'treatments name is optional');
 assert(TOOLS.find((t) => t.name === 'web_review').inputSchema.properties.treatment, 'web_review accepts a declared treatment');
@@ -62,7 +62,7 @@ const hs = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], { input: 
 const lines = hs.stdout.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
 assert(lines.find((m) => m.id === 1 && m.result && m.result.serverInfo), 'initialize answered');
 const toolsMsg = lines.find((m) => m.id === 2);
-assert(toolsMsg.result.tools.length === 16, 'tools/list answered with 16');
+assert(toolsMsg.result.tools.length === 17, 'tools/list answered with 17');
 
 // 5. unknown tool -> clean MCP error
 const bad = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], {
@@ -107,6 +107,26 @@ polish({}, { url: 'https://example.com', repo: '/tmp/site', motion: 'gsap,lenis'
 assert(/OPTIONAL MOTION SOURCES/.test(contract) && /github.com\/greensock\/GSAP/.test(contract) && /reduced motion/.test(contract), 'selected sources reach the coding runner contract');
 assert(!/react-bits/.test(contract), 'unselected source excluded');
 assert.throws(() => polish({}, { motion: 'gsap,unknown' }, fakeApi), /unknown motion asset/, 'invalid selection fails before running');
+
+// 5d. real prototype export: deterministic, safe copy and CTA, optional runtime
+const prototypeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-prototype-'));
+const { prototype } = require(path.join(ROOT, 'lib', 'motion-prototype'));
+const prototypeArgs = { headline: 'Make <space> for good work', description: 'Original & deliberate.', action: 'Ask for details', destination: 'https://example.com/?a=1&b=2', motion: 'gsap,lenis' };
+const produced = prototype({ outDir: prototypeDir }, prototypeArgs);
+const producedAgain = prototype({ outDir: prototypeDir }, prototypeArgs);
+assert.strictEqual(producedAgain, produced, 'repeat export has stable path');
+assert.strictEqual(fs.readdirSync(prototypeDir).length, 1, 'repeat export creates no duplicate source');
+const exported = fs.readFileSync(produced.split('\n')[0].slice(6), 'utf8');
+assert(exported.includes('Make &lt;space&gt;') && exported.includes('Original &amp; deliberate.'), 'copy escaped');
+assert(exported.includes('a=1&amp;b=2') && !exported.includes('href="javascript:'), 'CTA escaped');
+assert(/gsap@3\.15\.0/.test(exported) && /lenis@1\.3\.26/.test(exported), 'selected motion loaded');
+assert(/prefers-reduced-motion/.test(exported) && /if \(window\.gsap\)/.test(exported), 'static fallback and reduced motion');
+assert(/max-width:700px/.test(exported) && /min-height:48px/.test(exported), 'mobile layout and tap size');
+assert.throws(() => prototype({ outDir: prototypeDir }, { ...prototypeArgs, destination: 'javascript:alert(1)' }), /HTTPS or mailto/);
+assert.throws(() => prototype({ outDir: prototypeDir }, { ...prototypeArgs, motion: 'react-bits' }), /React Bits needs a React project/);
+const anchorExport = prototype({ outDir: prototypeDir }, { ...prototypeArgs, destination: '#details' });
+assert(fs.readFileSync(anchorExport.split('\n')[0].slice(6), 'utf8').includes('href="#details"'), 'internal CTA reaches a real section');
+fs.rmSync(prototypeDir, { recursive: true, force: true });
 
 // 6. doctor runs offline (may report MISSING — must not crash)
 fs.writeFileSync(path.join(HERE, 'args-empty.json'), '{}');
