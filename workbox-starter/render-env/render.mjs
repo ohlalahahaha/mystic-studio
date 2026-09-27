@@ -10,7 +10,7 @@ import tar from 'tar-fs';
 if (process.platform !== 'linux' || process.arch !== 'x64') throw new Error('This optional environment is for Linux x64; other systems can use Studio with their installed Chrome.');
 const here = dirname(fileURLToPath(import.meta.url));
 const cache = join(here, '.cache');
-const source = join(dirname(fileURLToPath(import.meta.resolve('@sparticuz/chromium'))), '..', 'bin');
+const source = join(here, 'node_modules', '@sparticuz', 'chromium', 'bin');
 const binary = join(cache, 'chromium');
 mkdirSync(cache, { recursive: true });
 if (!existsSync(binary)) {
