@@ -1,0 +1,9 @@
+{
+  "palette": { "abyss": "#061a22", "deep_tide": "#062b33", "ivory": "#f2e8d6", "aqua": "#87d9cf", "ember": "#d36d48" },
+  "type_families": ["Fraunces", "Manrope"],
+  "type_scale_px": { "body": 17, "caption": 12, "display_mobile": 44, "display_desktop": 76 },
+  "layout": "One editorial canvas with a fluid proof pair; preserve breathing room and one action",
+  "motion": "150–300 ms where useful; no essential information hidden by animation; respect reduced motion",
+  "signature_element": "The before/after proof pair",
+  "reference_lock": "Preserve approved wording, identity and composition; document any intentional departure"
+}
