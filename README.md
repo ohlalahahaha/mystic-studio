@@ -1,5 +1,7 @@
 # mystic-studio
 
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/ohlalahahaha/mystic-studio?utm_source=badge)
+
 **A zero-dependency AI media studio your coding agent can actually use.**
 
 Give Claude, ChatGPT, Codex, Gemini CLI or any MCP client three things it never had:
@@ -138,6 +140,14 @@ the model wants to say SHIP.
 ## Proven
 
 Built and battle-tested on a working estate before release: wedding-industry client sites reviewed and iterated to SHIP via the recheck loop, poster photography graded, promo videos dissected frame-by-frame. CI runs the offline smoke suite on macOS and Linux.
+
+## Benchmarks
+
+Offline micro-benchmarks for the pure engine code (verdict parsing, page-health formatting, the polish loop, treatments, the read allowlist) live in `bench/` and run on every PR via [CodSpeed](https://app.codspeed.io/ohlalahahaha/mystic-studio). They use vitest as a dev-only dependency — the published package stays zero-dependency.
+
+```sh
+npm install && npm run bench
+```
 
 ## License
 
