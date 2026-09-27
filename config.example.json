@@ -11,6 +11,9 @@
   "browserExe": "",
   "playwrightCore": "",
   "higgsfieldCli": "higgsfield",
+  "imageProvider": "higgsfield",
+  "glmImageBase": "https://api.z.ai/api/paas/v4",
+  "canonicalEnvFile": "~/.config/mystic/.env",
   "codingRunner": "glm-run",
   "token": "",
   "envFile": "~/.config/mystic-studio/.env"

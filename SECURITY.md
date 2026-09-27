@@ -8,7 +8,7 @@ Read this before exposing mystic-studio to anything you do not fully control.
 |---|---|---|
 | `web_shot` / `web_review` | Fetches any URL you give it and renders it in a local headless Chromium | `file://` URLs are **refused by default** (they would read local files). Set `allowFileUrls: true` only if you understand that. Screenshots land in `outDir`. |
 | `photo_see` / `photo_edit` / `video_*` (local paths) | **Reads local files** you point it at | Paths must be inside the allowed read set: current working dir, `outDir`, system temp, plus anything you add to `allowDirs`. Everything else is refused. |
-| `photo_generate` / `photo_edit` / `studio_catalog` | Calls your configured higgsfield/Muapi account | **Spends real prepaid credits per call.** Never auto-retry these. |
+| `photo_generate` / `photo_edit` / `studio_catalog` | Calls your configured higgsfield/Muapi account, or Z.ai GLM-Image when `provider: "glm"` | **Spends real money per call** (higgsfield prepaid credits; GLM-Image $0.015/image). Never auto-retry these. |
 | `web_review`, `photo_see`, `video_see`, `recheck` | Sends the image/video **to Google Gemini** for analysis | Whatever media you analyze leaves your machine. Don't feed it secrets. |
 | `mystic-coding-room` | Runs an external coding agent **with your user's full permissions** inside a repo | The destructive-command preflight is **advisory** — a filter on the contract text, not a sandbox. The agent can technically do anything your user can. Only point it at repos you can afford to lose; keep backups. |
 
@@ -21,6 +21,7 @@ Read this before exposing mystic-studio to anything you do not fully control.
 ## Secrets
 
 - The Gemini key is read from `~/.config/mystic-studio/.env` (or `GEMINI_API_KEY` env) and used only in the `Authorization` header. It is never logged, never written to jobs/sessions, never printed in errors.
+- The Z.ai key (`ZAI_API_KEY`) is read from the shell env, `~/.config/mystic-studio/.env`, or the canonical `~/.config/mystic/.env`. It is sent only in the `Authorization` header of the GLM-Image generation call to `api.z.ai` — never to the image download host, never logged, never written to jobs/sessions. Provider errors are surfaced as sanitized status/error codes only. A missing key on the glm provider is an explicit error, never a fallback to another provider.
 - Session and job files contain media paths and verdict text only — no keys.
 
 ## Known non-goals

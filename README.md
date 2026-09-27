@@ -69,6 +69,31 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 
 **Runnable prototype:** `mystic-studio motion-build --headline "A considered collection" --description "Original objects for everyday living." --action "Enquire" --destination "mailto:studio@example.com" --motion gsap,lenis` exports one responsive HTML section in the configured output directory. It has an original CSS visual, a real CTA, static fallback, reduced-motion handling, and optional GSAP/Lenis scripts loaded from pinned public CDNs. Identical inputs overwrite the same filename. Render it at 1440, 390 and 320 pixels, then check its output and page health before adapting it to a real brief. This is a prototype, not a reference-faithful customer deliverable. Vanta and React Bits remain project-specific because they require a WebGL dependency or a React project; `motion` shows their integration guards.
 
+## Image generation — higgsfield or Z.ai GLM-Image
+
+`photo_generate` is paid. Two providers, explicit selection, no silent fallback:
+
+```sh
+# higgsfield CLI (default — prepaid credits)
+mystic-studio generate "a foggy harbor at dawn" --ar 16:9
+
+# Z.ai hosted GLM-Image — paid API, $0.015/image, text-to-image only
+mystic-studio generate "a foggy harbor at dawn" --provider glm --size 1728x960 --quality hd
+```
+
+- **Provider selection:** pass `provider` per call (`"higgsfield"` or `"glm"`) or set `"imageProvider"` in config (default `higgsfield`, so existing setups keep working). An unknown provider, a missing key, or a failed call is an error — mystic-studio never quietly switches provider.
+- **GLM-Image is text-to-image only.** `photo_edit` with `provider: "glm"` is rejected explicitly — the hosted API has no image input; editing stays on higgsfield (pass `provider: "higgsfield"` explicitly). No self-hosting; only the hosted `glm-image` model is used and other model names are rejected. Provider API errors are reported as sanitized status + error codes — response bodies are never echoed.
+- **Sizes:** default `1280x1280`; recommended set: `1568x1056`, `1056x1568`, `1472x1088`, `1088x1472`, `1728x960`, `960x1728`; custom sizes with both sides a multiple of 32 within 512–2048. `aspect_ratio` maps `1:1`/`16:9`/`9:16` to the recommended square/landscape/portrait sizes; other ratios must pass `size` explicitly.
+- **Key:** `ZAI_API_KEY` in your shell, `~/.config/mystic-studio/.env`, or the canonical `~/.config/mystic/.env`. It is used server-side only: sent as a Bearer header to `api.z.ai` for the generation call and **never** to the image download host; never logged or printed. A missing key gives an actionable error, not a fallback.
+- **Paid status:** `photo_generate` labels itself as spending money in every tool listing (MCP tools/list, HTTP /v1/tools, CLI help) — GLM-Image costs $0.015/image. Call it only when the user explicitly asked for generated media; failed paid calls are never auto-retried.
+- Output lands in `outDir` (default `~/Desktop/mystic-studio`); the result reports the real saved file, provider, model and size. Works identically over MCP and the HTTP API:
+
+```sh
+curl -s localhost:7817/v1/call -d '{"name":"photo_generate","arguments":{"prompt":"a foggy harbor at dawn","provider":"glm","size":"1728x960"}}'
+```
+
+- Catalog: `mystic-studio catalog --provider glm` lists the GLM-Image model, sizes and paid status; `mystic-studio doctor` reports key presence (never the value) and marks live generation as unverified.
+
 ## Tools
 
 | Tool | What it does | Costs money? |
@@ -87,7 +112,7 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 | `video_keyframes` | N evenly-spaced frames as JPGs | no |
 | `video_gif` | Two-pass palette GIF from a video span | no |
 | `studio_doctor` | Dependency check with fix instructions | no |
-| `photo_generate` | Text → image via higgsfield | **credits** |
+| `photo_generate` | Text → image: higgsfield (default) or Z.ai GLM-Image (`provider: "glm"`, $0.015/image) | **credits / paid API** |
 | `photo_edit` | Instruction-based image edit | **credits** |
 | `studio_catalog` | List available generation models | no |
 
@@ -128,7 +153,7 @@ the model wants to say SHIP.
 
 ## Configuration
 
-`~/.config/mystic-studio/config.json` (copy `config.example.json`) or `./mystic-studio.config.json`. Everything has working defaults; nothing is pinned — binaries resolve from `PATH`, the browser is auto-discovered. Env overrides: `GEMINI_API_KEY`, `MYSTIC_STUDIO_TOKEN`, `MYSTIC_STUDIO_OUT`, `MYSTIC_STUDIO_PORT`, `MYSTIC_STUDIO_CHROME`, `MYSTIC_STUDIO_FLASH`, `MYSTIC_STUDIO_PRO`.
+`~/.config/mystic-studio/config.json` (copy `config.example.json`) or `./mystic-studio.config.json`. Everything has working defaults; nothing is pinned — binaries resolve from `PATH`, the browser is auto-discovered. Env overrides: `GEMINI_API_KEY`, `ZAI_API_KEY`, `MYSTIC_STUDIO_TOKEN`, `MYSTIC_STUDIO_OUT`, `MYSTIC_STUDIO_PORT`, `MYSTIC_STUDIO_CHROME`, `MYSTIC_STUDIO_FLASH`, `MYSTIC_STUDIO_PRO`, `MYSTIC_STUDIO_IMAGE_PROVIDER`, `MYSTIC_STUDIO_GLM_BASE`.
 
 | Key | Default | Notes |
 |---|---|---|
@@ -137,12 +162,15 @@ the model wants to say SHIP.
 | `allowFileUrls` | `false` | let `web_shot` shoot `file://` URLs (dangerous — see SECURITY.md) |
 | `flashModel` / `proModel` | `gemini-3.8-flash` / `gemini-3.1-pro-preview` | `--deep` uses the pro model |
 | `codingRunner` | `glm-run` | command `mystic-coding-room` drives |
+| `imageProvider` | `higgsfield` | default for `photo_generate` — per-call `provider` wins; `glm` = Z.ai GLM-Image |
+| `glmImageBase` | `https://api.z.ai/api/paas/v4` | GLM-Image API base override (for testing) |
+| `canonicalEnvFile` | `~/.config/mystic/.env` | extra secret file consulted for `ZAI_API_KEY` if not found elsewhere |
 
 ## Requirements
 
 - Node ≥ 18, curl
 - A free Gemini API key (all analysis)
-- Optional: `ffmpeg` (video tools — `brew install ffmpeg` / `apt install ffmpeg`), a Chromium for screenshots (`npx playwright install chromium`), the [higgsfield CLI](https://github.com/Open-Higgsfield-AI) (generation)
+- Optional: `ffmpeg` (video tools — `brew install ffmpeg` / `apt install ffmpeg`), a Chromium for screenshots (`npx playwright install chromium`), the [higgsfield CLI](https://github.com/Open-Higgsfield-AI) or a [Z.ai](https://z.ai) API key (image generation — GLM-Image is $0.015/image, paid)
 - `mystic-studio doctor` tells you exactly which of these you're missing and how to install them.
 
 ## Proven

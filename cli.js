@@ -19,6 +19,7 @@ function usage() {
   mystic-studio review <url> [--brief "..."] [--treatment golden] [--deep]
   mystic-studio recheck [session-id] [--url u] [--image p] [--deep]
   mystic-studio generate "<prompt>" [--ar 16:9] [--model m]     spends credits
+  mystic-studio generate "<prompt>" --provider glm [--size 1280x1280] [--quality hd]  paid API ($0.015/image)
   mystic-studio edit <image> -p "<instruction>"                 spends credits
   mystic-studio catalog [kind]
   mystic-studio vsee <video> [--focus "..."] [--deep]
@@ -102,6 +103,7 @@ function main() {
   if (verb !== 'doctor') {
     if (name === 'photo_edit' && args.p !== undefined) { args.instruction = args.p; delete args.p; }
     if (name === 'video_gif' && args.sec !== undefined) { args.seconds = args.sec; delete args.sec; }
+    if (name === 'photo_generate' && args.ar !== undefined) { args.aspect_ratio = args.ar; delete args.ar; }
   }
 
   const tmp = path.join(os.tmpdir(), `studio-cli-${Math.random().toString(36).slice(2)}.json`);

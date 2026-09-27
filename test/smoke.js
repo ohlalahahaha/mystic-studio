@@ -136,6 +136,67 @@ const anchorExport = prototype({ outDir: prototypeDir }, { ...prototypeArgs, des
 assert(fs.readFileSync(anchorExport.split('\n')[0].slice(6), 'utf8').includes('href="#details"'), 'internal CTA reaches a real section');
 fs.rmSync(prototypeDir, { recursive: true, force: true });
 
+// 5e. glm-image provider: pure validation (offline, no network, no real secrets)
+const glm = require(path.join(ROOT, 'lib', 'glm'));
+assert.strictEqual(glm.RECOMMENDED_SIZES.length, 7, 'seven recommended glm sizes');
+for (const s of glm.RECOMMENDED_SIZES) assert(glm.validSize(s), 'recommended size ' + s + ' accepted');
+for (const s of ['1024x1024', '512x512', '2048x2048', '960x960', '1280X1280']) assert(glm.validSize(s), 'custom/normalized size ' + s + ' accepted');
+for (const s of ['banana', '1000x1000', '2049x1024', '480x640', '1280', '']) assert(!glm.validSize(s), 'invalid size ' + JSON.stringify(s) + ' refused');
+assert.deepStrictEqual(Object.keys(glm.ASPECT_MAP), ['1:1', '16:9', '9:16'], 'aspect map is the documented trio');
+assert.strictEqual(glm.provider({ imageProvider: 'higgsfield' }, {}), 'higgsfield', 'config default provider kept');
+assert.strictEqual(glm.provider({}, { provider: 'GLM' }), 'glm', 'explicit provider wins, case-tolerant');
+assert.throws(() => glm.provider({}, { provider: 'openai' }), /known providers/, 'unknown provider refused');
+assert.throws(() => glm.provider({ imageProvider: 'openai' }, {}), /known providers/, 'bad config provider refused');
+const glmSig = path.join(os.tmpdir(), 'glm-sig-test.png');
+fs.writeFileSync(glmSig, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+assert(glm.isImageFile(glmSig), 'png signature detected');
+fs.writeFileSync(glmSig, '<html>not an image</html>');
+assert(!glm.isImageFile(glmSig), 'html refused by signature check');
+fs.unlinkSync(glmSig);
+const pgTool = TOOLS.find((t) => t.name === 'photo_generate');
+assert.deepStrictEqual(pgTool.inputSchema.properties.provider.enum, ['higgsfield', 'glm'], 'provider enum on photo_generate');
+assert(pgTool.inputSchema.properties.size && pgTool.inputSchema.properties.quality, 'glm size/quality in schema');
+assert(/\$0\.015/.test(pgTool.description) && /SPENDS/.test(pgTool.description) && /No silent provider fallback/.test(pgTool.description), 'paid + no-fallback labelled');
+assert(TOOLS.find((t) => t.name === 'photo_edit').inputSchema.properties.provider, 'photo_edit accepts provider (to reject glm explicitly)');
+assert(TOOLS.find((t) => t.name === 'studio_catalog').inputSchema.properties.provider, 'studio_catalog accepts provider');
+
+// 5f. glm error hygiene (REPRO1+2 regressions): untrusted code/message/stderr never echo;
+// thrown transport failures still clean partial download output. Simulated, no network, no real wait.
+const cpMod = require('child_process');
+const origSpawnSync = cpMod.spawnSync;
+try {
+  cpMod.spawnSync = () => ({ status: 0, stdout: JSON.stringify({ error: { code: 'FAKE_SECRET_FOR_TEST' } }) + '\n403', stderr: '' });
+  let e1 = null;
+  try { glm.generate({ zaiKey: 'FAKE_SECRET_FOR_TEST', glmImageBase: 'http://fixture.invalid' }, { prompt: 'test' }); } catch (e) { e1 = e; }
+  assert(e1 && /HTTP 403/.test(e1.message), 'non-2xx surfaces sanitized status');
+  assert(e1 && !/FAKE_SECRET_FOR_TEST/.test(e1.message), 'untrusted error.code never echoes');
+  cpMod.spawnSync = () => ({ status: 0, stdout: JSON.stringify({ error: { code: '1002' } }) + '\n401', stderr: '' });
+  let e2 = null;
+  try { glm.generate({ zaiKey: 'FAKE_SECRET_FOR_TEST', glmImageBase: 'http://fixture.invalid' }, { prompt: 'test' }); } catch (e) { e2 = e; }
+  assert(e2 && /code=1002/.test(e2.message) && !/FAKE_SECRET_FOR_TEST/.test(e2.message), 'bounded numeric provider code allowed');
+  cpMod.spawnSync = () => ({ status: 7, stdout: '', stderr: 'curl: (7) secret-detail-for-test' });
+  let e3 = null;
+  try { glm.generate({ zaiKey: 'FAKE_SECRET_FOR_TEST', glmImageBase: 'http://fixture.invalid' }, { prompt: 'test' }); } catch (e) { e3 = e; }
+  assert(e3 && /curl exit 7/.test(e3.message) && !/secret-detail-for-test/.test(e3.message), 'raw stderr never echoes');
+  cpMod.spawnSync = () => { throw new Error('spawnSync curl ETIMEDOUT'); };
+  let e4 = null;
+  try { glm.generate({ zaiKey: 'FAKE_SECRET_FOR_TEST', glmImageBase: 'http://fixture.invalid' }, { prompt: 'test' }); } catch (e) { e4 = e; }
+  assert(e4 && /curl transport error/.test(e4.message) && !/ETIMEDOUT/.test(e4.message), 'generate transport failure sanitized');
+  const dlDir = fs.mkdtempSync(path.join(os.tmpdir(), 'glm-timeout-'));
+  cpMod.spawnSync = (cmdName, args) => {
+    const oi = args.indexOf('-o');
+    fs.writeFileSync(args[oi + 1], 'partial');
+    throw new Error('spawnSync curl ETIMEDOUT');
+  };
+  let d1 = null;
+  try { glm.download({ outDir: dlDir, maxImageMb: 9 }, 'http://fixture.invalid/x.png', 'timeout case'); } catch (e) { d1 = e; }
+  assert(d1 && /download failed/.test(d1.message) && !/ETIMEDOUT/.test(d1.message), 'download transport timeout sanitized');
+  assert(fs.existsSync(dlDir) && fs.readdirSync(dlDir).length === 0, 'timeout leaves no partial output');
+  fs.rmSync(dlDir, { recursive: true, force: true });
+} finally { cpMod.spawnSync = origSpawnSync; }
+
+
+
 // 6. doctor runs offline (may report MISSING — must not crash)
 fs.writeFileSync(path.join(HERE, 'args-empty.json'), '{}');
 const doc2 = spawnSync(process.execPath, [path.join(ROOT, 'run.js'), 'studio_doctor', path.join(HERE, 'args-empty.json')], { encoding: 'utf8', timeout: 30000 });
@@ -271,6 +332,148 @@ if (/playwright=OK/.test(chk.stdout) && /browser=OK/.test(chk.stdout)) {
   }
 } else {
   console.log('shot --health runtime test: skipped (no playwright/browser in this environment)');
+}
+
+
+// 13. glm-image end-to-end against a local fixture provider (offline — no real API, no spend)
+{
+  const state = { gen: [], dl: [] };
+  const glmDir = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-glm-'));
+  const glmOut = path.join(glmDir, 'out');
+  const mkCfg = (extra) => {
+    const p = path.join(glmDir, 'config-' + Math.random().toString(36).slice(2) + '.json');
+    fs.writeFileSync(p, JSON.stringify({ outDir: glmOut, stateDir: path.join(glmDir, 'state'), envFile: path.join(glmDir, 'env.env'), canonicalEnvFile: path.join(glmDir, 'missing.env'), higgsfieldCli: path.join(glmDir, 'hf-fake'), ...extra }));
+    return p;
+  };
+  fs.writeFileSync(path.join(glmDir, 'env.env'), '');
+  const hfFake = path.join(glmDir, 'hf-fake');
+  fs.writeFileSync(hfFake, '#!/bin/sh\necho "higgs-ran:$@"\nexit 0\n');
+  fs.chmodSync(hfFake, 0o755);
+  const srv = http.createServer((req, res) => {
+    const u = new URL(req.url, 'http://x');
+    if (req.method === 'POST' && u.pathname === '/images/generations') {
+      let b = '';
+      req.on('data', (d) => { b += d; });
+      req.on('end', () => {
+        let body = {};
+        try { body = JSON.parse(b); } catch (e) {}
+        state.gen.push({ auth: req.headers.authorization || null, body, path: u.pathname });
+        const p = String(body.prompt || '');
+        if (/APIFAIL/.test(p)) { res.writeHead(401, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: { code: '1002', message: 'invalid api key fake-secret-xyz-do-not-echo' } })); }
+        else if (/BADJSON/.test(p)) { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('totally not json body'); }
+        else if (/NODATA/.test(p)) { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ created: 123, data: [] })); }
+        else if (/DL404/.test(p)) { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ created: 123, data: [{ url: base + '/img/missing.png' }] })); }
+        else if (/DLFAKE/.test(p)) { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ created: 123, data: [{ url: base + '/img/fake.png' }] })); }
+        else { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ created: 123, data: [{ url: base + '/img/happy.png' }] })); }
+      });
+      return;
+    }
+    if (req.method === 'GET' && u.pathname === '/img/happy.png') { state.dl.push({ auth: req.headers.authorization || null }); res.writeHead(200, { 'content-type': 'image/png' }); res.end(PNG1); return; }
+    if (req.method === 'GET' && u.pathname === '/img/missing.png') { state.dl.push({ auth: req.headers.authorization || null }); res.writeHead(404, { 'content-type': 'text/html' }); res.end('<html>leak-marker-404</html>'); return; }
+    if (req.method === 'GET' && u.pathname === '/img/fake.png') { state.dl.push({ auth: req.headers.authorization || null }); res.writeHead(200, { 'content-type': 'text/html' }); res.end('<html>leak-marker-fake</html>'); return; }
+    res.writeHead(404); res.end();
+  });
+  await new Promise((resolve) => srv.listen(0, '127.0.0.1', resolve));
+  const base = 'http://127.0.0.1:' + srv.address().port;
+  const glmCfgPath = mkCfg({ glmImageBase: base });
+  const glmEnv = (extra) => ({ ...process.env, MYSTIC_STUDIO_CONFIG: glmCfgPath, ZAI_API_KEY: 'fake-test-key-not-real', ...extra });
+  const glmRun = async (tool, args, env) => {
+    const argsFile = path.join(glmDir, 'args.json');
+    fs.writeFileSync(argsFile, JSON.stringify(args));
+    const r = await runAsync([path.join(ROOT, 'run.js'), tool, argsFile], { cwd: ROOT, timeoutMs: 60000, env: env || glmEnv() });
+    let body = null;
+    try { body = JSON.parse(r.stdout.trim()); } catch (e) {}
+    return { status: r.status, body, raw: String(r.stdout || '') + String(r.stderr || '') };
+  };
+  const def = await glmRun('photo_generate', { prompt: 'plain harbor' });
+  assert(def.body.ok === true && /higgs-ran:image plain harbor/.test(def.body.text), 'default provider still higgsfield with same args');
+  assert.strictEqual(state.gen.length, 0, 'default path makes zero glm calls');
+  const happy = await glmRun('photo_generate', { prompt: 'sunset pier', provider: 'glm', size: '1728X960', quality: 'hd' });
+  assert(happy.body.ok === true, 'glm happy path succeeds: ' + (happy.body.error || ''));
+  assert(/saved: /.test(happy.body.text) && /\$0\.015/.test(happy.body.text) && /1728x960/.test(happy.body.text), 'result reports file/size/price');
+  const saved = happy.body.text.split('\n').find((l) => l.startsWith('saved: ')).slice(7);
+  assert(path.isAbsolute(saved) && saved.startsWith(glmOut) && fs.existsSync(saved) && glm.isImageFile(saved), 'png really saved in outDir');
+  assert.strictEqual(state.gen[0].path, '/images/generations', 'documented endpoint path');
+  assert.strictEqual(state.gen[0].auth, 'Bearer fake-test-key-not-real', 'generation carries bearer auth');
+  assert.deepStrictEqual(state.gen[0].body, { model: 'glm-image', prompt: 'sunset pier', size: '1728x960', quality: 'hd' }, 'request body normalized');
+  assert.strictEqual(state.dl[state.dl.length - 1].auth, null, 'download host sees NO auth header');
+  const ar = await glmRun('photo_generate', { prompt: 'ar case', provider: 'glm', aspect_ratio: '16:9' });
+  assert(ar.body.ok === true && state.gen[1].body.size === '1728x960', 'aspect_ratio 16:9 maps to 1728x960');
+  const genCount = () => state.gen.length;
+  for (const [args, re, tag] of [
+    [{ prompt: 'x', provider: 'glm', aspect_ratio: '21:9' }, /unsupported aspect_ratio/, 'bad aspect ratio'],
+    [{ prompt: 'x', provider: 'glm', size: '970x1280' }, /invalid size/, 'bad size'],
+    [{ prompt: 'x', provider: 'glm', quality: 'ultra' }, /invalid quality/, 'bad quality'],
+    [{ prompt: 'x', provider: 'glm', model: 'glm-image-ultra' }, /unsupported model/, 'foreign model'],
+    [{ prompt: 'x', provider: 'glm', image: '/tmp/a.png' }, /text-to-image only/, 'image input refused'],
+    [{ prompt: '', provider: 'glm' }, /non-empty text prompt/, 'empty prompt'],
+    [{ prompt: 'x', provider: 'openai' }, /known providers/, 'unknown provider'],
+  ]) {
+    const bad = await glmRun('photo_generate', args);
+    assert(bad.body.ok === false && re.test(bad.body.error), tag + ' fails cleanly');
+  }
+  assert.strictEqual(genCount(), 2, 'invalid requests made zero glm calls');
+  const nokey = await glmRun('photo_generate', { prompt: 'x', provider: 'glm' }, glmEnv({ ZAI_API_KEY: '' }));
+  assert(nokey.body.ok === false && /ZAI_API_KEY/.test(nokey.body.error) && /higgsfield/.test(nokey.body.error), 'missing key is actionable');
+  assert.strictEqual(genCount(), 2, 'missing key makes zero glm calls');
+  const apiFail = await glmRun('photo_generate', { prompt: 'APIFAIL case', provider: 'glm' });
+  assert(apiFail.body.ok === false && /HTTP 401/.test(apiFail.body.error) && /code=1002/.test(apiFail.body.error), 'api error carries status + code');
+  assert(!/fake-secret-xyz/.test(apiFail.raw) && !/invalid api key/.test(apiFail.raw), 'provider error body/secret never echoed');
+  const badJson = await glmRun('photo_generate', { prompt: 'BADJSON case', provider: 'glm' });
+  assert(badJson.body.ok === false && /non-JSON/.test(badJson.body.error), 'non-json reply surfaced');
+  assert(!/totally not json/.test(badJson.raw), 'non-json body never echoed');
+  const noData = await glmRun('photo_generate', { prompt: 'NODATA case', provider: 'glm' });
+  assert(noData.body.ok === false && /no image url/.test(noData.body.error), 'missing data url surfaced');
+  const outBefore = fs.readdirSync(glmOut).sort().join('|');
+  const dl404 = await glmRun('photo_generate', { prompt: 'DL404 case', provider: 'glm' });
+  assert(dl404.body.ok === false && /download failed/.test(dl404.body.error), 'download 404 fails cleanly');
+  assert(!/leak-marker/.test(dl404.raw), '404 html never echoed');
+  assert.strictEqual(state.dl[state.dl.length - 1].auth, null, 'failed download also unauthenticated');
+  const dlFake = await glmRun('photo_generate', { prompt: 'DLFAKE case', provider: 'glm' });
+  assert(dlFake.body.ok === false && /not a supported image/.test(dlFake.body.error), 'html masquerading as image rejected by signature');
+  assert(!/leak-marker/.test(dlFake.raw), 'fake image body never echoed');
+  assert.strictEqual(fs.readdirSync(glmOut).sort().join('|'), outBefore, 'failed downloads leave no partial files');
+  const editGlm = await glmRun('photo_edit', { image: saved, instruction: 'brighten', provider: 'glm' });
+  assert(editGlm.body.ok === false && /text-to-image only/.test(editGlm.body.error) && /provider "higgsfield"/.test(editGlm.body.error), 'glm edit refused with explicit guidance');
+  const glmDefaultCfg = mkCfg({ glmImageBase: base, imageProvider: 'glm' });
+  const editDefault = await glmRun('photo_edit', { image: saved, instruction: 'brighten' }, { ...process.env, MYSTIC_STUDIO_CONFIG: glmDefaultCfg, ZAI_API_KEY: 'fake-test-key-not-real' });
+  assert(editDefault.body.ok === false && /provider "higgsfield"/.test(editDefault.body.error), 'glm-as-default edit guides to explicit higgsfield');
+  assert.strictEqual(genCount(), 7, 'edits and download failures made no successful extra paid calls');
+  // real CLI happy path: --ar normalized to aspect_ratio, full generate + download through the actual entry point
+  const cliGen = await runAsync([path.join(ROOT, 'cli.js'), 'generate', 'cli harbor', '--provider', 'glm', '--ar', '16:9'], { cwd: ROOT, timeoutMs: 60000, env: glmEnv() });
+  assert.strictEqual(cliGen.status, 0, 'cli generate --provider glm --ar 16:9 exits 0: ' + String(cliGen.stderr || '').slice(0, 200));
+  assert(/saved: /.test(cliGen.stdout), 'cli generate saves an image');
+  const cliSaved = cliGen.stdout.split('\n').find((l) => l.startsWith('saved: ')).slice(7);
+  assert(fs.existsSync(cliSaved) && glm.isImageFile(cliSaved), 'cli generated image really saved');
+  assert(state.gen[state.gen.length - 1].body.size === '1728x960', 'cli --ar 16:9 reaches glm as size 1728x960');
+
+  const cliCat = spawnSync(process.execPath, [path.join(ROOT, 'cli.js'), 'catalog', '--provider', 'glm'], { encoding: 'utf8', timeout: 30000 });
+  assert.strictEqual(cliCat.status, 0, 'catalog --provider glm exits 0');
+  assert(/\$0\.015/.test(cliCat.stdout) && /TEXT-TO-IMAGE ONLY/.test(cliCat.stdout), 'cli catalog lists glm paid text-to-image status');
+  const cliNoKey = spawnSync(process.execPath, [path.join(ROOT, 'cli.js'), 'generate', 'x', '--provider', 'glm'], { encoding: 'utf8', timeout: 30000, env: glmEnv({ ZAI_API_KEY: '' }) });
+  assert.strictEqual(cliNoKey.status, 1, 'cli generate glm without key exits 1');
+  assert(/ZAI_API_KEY/.test(String(cliNoKey.stderr || '') + String(cliNoKey.stdout || '')), 'cli missing-key error is actionable');
+  fs.writeFileSync(path.join(glmDir, 'doc-args.json'), '{}');
+  const docRun = spawnSync(process.execPath, [path.join(ROOT, 'run.js'), 'studio_doctor', path.join(glmDir, 'doc-args.json')], { encoding: 'utf8', timeout: 60000, env: glmEnv() });
+  const docBody = JSON.parse(docRun.stdout.trim());
+  assert(/glm-image \(optional\)/.test(docBody.text) && /not verified/.test(docBody.text), 'doctor reports glm key presence, live generation unverified');
+  const httpCfg = mkCfg({ port: 17899, host: '127.0.0.1' });
+  const hsrv = spawn(process.execPath, [path.join(ROOT, 'http.js')], { env: { ...process.env, MYSTIC_STUDIO_CONFIG: httpCfg }, stdio: ['ignore', 'pipe', 'pipe'] });
+  let httpOut = '';
+  hsrv.stdout.on('data', (d) => { httpOut += d; });
+  await new Promise((resolve) => {
+    const t = setInterval(() => { if (/HTTP API on/.test(httpOut)) { clearInterval(t); resolve(); } }, 100);
+    setTimeout(() => { clearInterval(t); resolve(); }, 5000);
+  });
+  const toolsBody = await new Promise((resolve, reject) => {
+    http.get('http://127.0.0.1:17899/v1/tools', (res) => { let b = ''; res.on('data', (d) => { b += d; }); res.on('end', () => resolve(b)); }).on('error', reject);
+  });
+  hsrv.kill();
+  const httpTools = JSON.parse(toolsBody).tools;
+  assert(httpTools.some((t) => t.name === 'photo_generate' && t.inputSchema.properties.provider && t.inputSchema.properties.provider.enum[0] === 'higgsfield'), 'HTTP /v1/tools exposes shared provider schema');
+  srv.close();
+  try { if (srv.closeAllConnections) srv.closeAllConnections(); } catch (e) {}
+  fs.rmSync(glmDir, { recursive: true, force: true });
 }
 
 for (const f of ['args-empty.json', 'args-shot.json']) try { fs.unlinkSync(path.join(HERE, f)); } catch {}
