@@ -9,6 +9,7 @@ const path = require('path');
 const http = require('http');
 const crypto = require('crypto');
 const assert = require('assert');
+const { findFixtureFont } = require('./fixture-font');
 
 const HERE = __dirname;
 const ROOT = path.join(HERE, '..');
@@ -62,6 +63,11 @@ assert(TOOLS.find((t) => t.name === 'web_review').inputSchema.properties.treatme
 assert(/treatment/.test(TOOLS.find((t) => t.name === 'web_review').description), 'web_review mentions the treatment hook');
 assert(TOOLS.find((t) => t.name === 'polish').inputSchema.properties.motion, 'polish accepts optional motion selection');
 assert(names.some((n) => /generate|edit/.test(n) && TOOLS.find((t) => t.name === n).description.includes('CREDITS')), 'paid tools labelled');
+const posterTool = TOOLS.find((t) => t.name === 'poster_render');
+assert(posterTool.inputSchema.additionalProperties === false, 'poster_render top-level schema rejects unknown properties');
+assert(posterTool.inputSchema.properties.manifest.properties.canvas.required.includes('width'), 'poster manifest has typed canvas properties');
+assert(posterTool.inputSchema.properties.manifest.properties.images.items.properties.asset.required.includes('sha256'), 'poster image schema requires hashed local assets');
+assert(posterTool.inputSchema.properties.manifest.properties.text.items.properties.font.required.includes('family'), 'poster text schema defines typed font properties');
 
 // 4. MCP handshake over stdio
 const init = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }) + '\n' +
@@ -77,8 +83,9 @@ assert(toolsMsg.result.tools.length === 18, 'tools/list answered with 18');
 const posterTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-poster-'));
 const posterCfg = path.join(posterTmp, 'poster-config.json');
 fs.writeFileSync(posterCfg, JSON.stringify({ outDir: path.join(posterTmp, 'out'), stateDir: path.join(posterTmp, 'state'), allowDirs: [posterTmp] }));
+const fixtureFontSource = findFixtureFont();
 const posterFont = path.join(posterTmp, 'fixture.ttf');
-fs.copyFileSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', posterFont);
+fs.copyFileSync(fixtureFontSource, posterFont);
 const fontHash = crypto.createHash('sha256').update(fs.readFileSync(posterFont)).digest('hex');
 const posterBase = { canvas: { width: 100, height: 100, dpi: 96 }, text: [{ id: 'words', text: 'Tri ân', color: '#000000', align: 'left', bounds: { x: 10, y: 10, width: 80, height: 20 }, font: { family: 'Fixture', path: posterFont, sha256: fontHash, size: 16 } }] };
 const posterArgs = path.join(posterTmp, 'poster.json');
@@ -89,9 +96,13 @@ const runPoster = (manifest, output = path.join(posterTmp, 'out')) => {
 };
 const mismatch = runPoster({ ...posterBase, text: [{ ...posterBase.text[0], font: { ...posterBase.text[0].font, sha256: fontHash.slice(0, 32) + '0'.repeat(32) } }] });
 assert(mismatch.body.ok === false && /SHA256 mismatch/.test(mismatch.body.error), 'poster rejects font hash mismatch');
-assert(fs.readdirSync(path.join(posterTmp, 'out')).length === 0, 'poster hash failure leaves no output');
+for (const dpi of [47, 961]) {
+  const rejectedDpi = runPoster({ ...posterBase, canvas: { ...posterBase.canvas, dpi } });
+  assert(rejectedDpi.body.ok === false && /canvas\.dpi must be an integer from 48 to 960/.test(rejectedDpi.body.error), `poster rejects unsupported DPI ${dpi}`);
+}
+assert(fs.readdirSync(path.join(posterTmp, 'out')).length === 0, 'poster hash/DPI failures leave no output');
 const symlink = path.join(posterTmp, 'font-link.ttf');
-fs.symlinkSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', symlink);
+fs.symlinkSync(posterFont, symlink);
 const linked = runPoster({ ...posterBase, text: [{ ...posterBase.text[0], font: { ...posterBase.text[0].font, path: symlink, sha256: crypto.createHash('sha256').update(fs.readFileSync(symlink)).digest('hex') } }] });
 assert(linked.body.ok === false && /non-symlink/.test(linked.body.error), 'poster rejects symlink escape');
 const image = path.join(posterTmp, 'fixture.png');
@@ -100,7 +111,7 @@ const imageHash = crypto.createHash('sha256').update(fs.readFileSync(image)).dig
 const imageManifest = { ...posterBase, images: [{ id: 'photo', asset: { path: image, sha256: imageHash.slice(0, 32) + '0'.repeat(32) }, source_width: 1, source_height: 1, source: { x: 0, y: 0, width: 1, height: 1 }, dest: { x: 0, y: 0, width: 1, height: 1 } }] };
 const imageMismatch = runPoster(imageManifest);
 assert(imageMismatch.body.ok === false && /asset SHA256 mismatch/.test(imageMismatch.body.error), 'poster rejects image hash mismatch');
-const outside = runPoster({ ...posterBase, text: [{ ...posterBase.text[0], font: { ...posterBase.text[0].font, path: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', sha256: crypto.createHash('sha256').update(fs.readFileSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')).digest('hex') } }] });
+const outside = runPoster({ ...posterBase, text: [{ ...posterBase.text[0], font: { ...posterBase.text[0].font, path: fixtureFontSource, sha256: crypto.createHash('sha256').update(fs.readFileSync(fixtureFontSource)).digest('hex') } }] });
 assert(outside.body.ok === false && /outside allowed read dirs/.test(outside.body.error), 'poster rejects outside allowDirs');
 assert(fs.statSync(posterFont).mtimeMs > 0 && fs.readdirSync(path.join(posterTmp, 'out')).length === 0, 'poster sources and output remain clean after failures');
 
