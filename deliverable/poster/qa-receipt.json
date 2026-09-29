@@ -1,0 +1,97 @@
+{
+  "operation": "poster_render",
+  "manifest_sha256": "4861939f180a1e64febe100637b173cfb7325c6427c7d8ec197d9d2af6eaa573",
+  "source_files": [
+    {
+      "path": "/tmp/studio-poster-browser-8ujE9C/alpha.png",
+      "sha256": "3258e07d44185c00195840611c007ea301dc5c5f32d1a0661f8fb42d0634c52d",
+      "bytes": 278
+    },
+    {
+      "path": "/tmp/studio-poster-browser-8ujE9C/DejaVuSans.ttf",
+      "sha256": "ae7b7855e115a5966d8b1b3f80f254ccc117ec86f9965e202ee2940453837280",
+      "bytes": 759720
+    }
+  ],
+  "source_dimensions": [
+    {
+      "id": "alpha",
+      "width": 40,
+      "height": 40,
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 40,
+        "height": 40
+      }
+    }
+  ],
+  "output_dimensions": {
+    "width": 300,
+    "height": 450
+  },
+  "pdf_page_points": {
+    "width": 144,
+    "height": 216
+  },
+  "pdf_physical_inches": {
+    "width": 2,
+    "height": 3
+  },
+  "enlarged_layers": [],
+  "validation": {
+    "fonts_ready": true,
+    "images_nonzero": true,
+    "literal_text_verified": true,
+    "accidental_text_overflow": false,
+    "intentional_layer_overlaps": []
+  },
+  "outputs": [
+    "source.html",
+    "poster.png",
+    "poster.pdf"
+  ],
+  "checksums": {
+    "source.html": "4cf40c29f468b7c9c43de08485df1031bf2624412ad782e63436785149b180ff",
+    "poster.png": "678c8770e8507e21a9789d227eca8fb1b9f05ebbf30a81c6e40ae197b50760a8",
+    "poster.pdf": "95d669b81d9bf3b04fd59fffeded2b54bec388d7448a7a76183a5d5002817c3e"
+  },
+  "technical_pass": true,
+  "limitations": [
+    "RGB raster/PDF, not CMYK or PDF/X; not a print-readiness certification.",
+    "Technical pass is not final artistic approval or face-identity verification."
+  ],
+  "provenance": {
+    "repository_sha": "0552616b67d9965a6b970a3492ca7f7fd14b9cb5",
+    "implementation_files": [
+      "lib/poster.js",
+      "lib/core.js",
+      "run.js",
+      "server.js",
+      "cli.js",
+      "test/browser-poster.js",
+      "test/smoke.js",
+      "README.md",
+      "package.json"
+    ],
+    "acceptance_commands": [
+      {
+        "command": "npm test",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run test:browser",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      }
+    ]
+  },
+  "browser": {
+    "network_blocked": true,
+    "page_scripts_blocked_by_csp": true
+  },
+  "created": "2026-09-29T11:06:07.869Z"
+}

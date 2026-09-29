@@ -100,6 +100,19 @@ curl -s localhost:7817/v1/call -d '{"name":"photo_generate","arguments":{"prompt
 
 ## Tools
 
+### Deterministic poster rendering
+
+`poster_render` assembles a typed manifest—never arbitrary HTML—into an isolated folder containing a lossless RGBA PNG, a one-page PDF at the requested physical size, editable self-contained HTML source, and `qa-receipt.json`. It accepts only local image/font files with mandatory SHA256 hashes and explicit source/destination bounds; callers must specify every crop. It rejects remote URLs, path traversal, symlinks outside `allowDirs`, oversized resources, excessive layers, invalid fonts, accidental text overflow, and missing assets. Browser networking and page scripts are blocked. Output is RGB, not CMYK or PDF/X, so it is not a print-readiness certification; enlarged images are flagged as interpolation, not native added detail. A technical pass is not artistic approval or face-identity verification.
+
+```sh
+mystic-studio poster-render manifest.json --output-dir ~/Desktop/posters
+# manifest.canvas: { "width": 300, "height": 450, "dpi": 150 }
+# manifest.images[]: id, asset { path, sha256 }, source_width/height, explicit source and dest bounds
+# manifest.text[]: id, literal text, font { path, sha256 }, explicit bounds and typography
+```
+
+Offline tests cover hash/path/symlink/source-safety failures. Real browser proof requires `npm i --no-save playwright-core`, a Chromium binary, plus `pdfinfo`/`pdftotext`/Pillow in the test environment; run `npm run test:browser`.
+
 | Tool | What it does | Costs money? |
 |---|---|---|
 | `photo_see` | Photography critique: composition, light, defects, print-readiness, SCORE /100 | no |
@@ -115,6 +128,7 @@ curl -s localhost:7817/v1/call -d '{"name":"photo_generate","arguments":{"prompt
 | `video_see` | Scene summary, timestamped timeline, transcription, quality verdict | no |
 | `video_keyframes` | N evenly-spaced frames as JPGs | no |
 | `video_gif` | Two-pass palette GIF from a video span | no |
+| `poster_render` | Deterministic typed-manifest poster assembly: PNG, PDF, source and QA receipt | no |
 | `studio_doctor` | Dependency check with fix instructions | no |
 | `photo_generate` | Text → image: higgsfield (default) or Z.ai GLM-Image (`provider: "glm"`, $0.015/image) | **credits / paid API** |
 | `photo_edit` | Instruction-based image edit | **credits** |

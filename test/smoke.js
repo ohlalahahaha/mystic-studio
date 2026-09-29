@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const http = require('http');
+const crypto = require('crypto');
 const assert = require('assert');
 
 const HERE = __dirname;
@@ -51,7 +52,7 @@ assert(/TREATMENT DISCIPLINE/.test(prompts.DESIGN_LAW), 'DESIGN_LAW is treatment
 const { TOOLS } = require(path.join(ROOT, 'lib', 'core'));
 
 // 3. tool list: 17 tools, schema'd, neutral
-assert.strictEqual(TOOLS.length, 17, '17 tools');
+assert.strictEqual(TOOLS.length, 18, '18 tools');
 for (const t of TOOLS) { assert(t.name && t.description && t.inputSchema, `${t.name} complete`); assert(!/Phoenix/i.test(t.description)); }
 const names = TOOLS.map((t) => t.name);
 for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate', 'web_audit', 'polish', 'taste_note', 'treatments', 'motion_assets', 'motion_prototype']) assert(names.includes(want), `${want} present`);
@@ -70,7 +71,38 @@ const hs = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], { input: 
 const lines = hs.stdout.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
 assert(lines.find((m) => m.id === 1 && m.result && m.result.serverInfo), 'initialize answered');
 const toolsMsg = lines.find((m) => m.id === 2);
-assert(toolsMsg.result.tools.length === 17, 'tools/list answered with 17');
+assert(toolsMsg.result.tools.length === 18, 'tools/list answered with 18');
+
+// 5z. deterministic poster validation fails closed before any output is created.
+const posterTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-poster-'));
+const posterCfg = path.join(posterTmp, 'poster-config.json');
+fs.writeFileSync(posterCfg, JSON.stringify({ outDir: path.join(posterTmp, 'out'), stateDir: path.join(posterTmp, 'state'), allowDirs: [posterTmp] }));
+const posterFont = path.join(posterTmp, 'fixture.ttf');
+fs.copyFileSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', posterFont);
+const fontHash = crypto.createHash('sha256').update(fs.readFileSync(posterFont)).digest('hex');
+const posterBase = { canvas: { width: 100, height: 100, dpi: 96 }, text: [{ id: 'words', text: 'Tri ân', color: '#000000', align: 'left', bounds: { x: 10, y: 10, width: 80, height: 20 }, font: { family: 'Fixture', path: posterFont, sha256: fontHash, size: 16 } }] };
+const posterArgs = path.join(posterTmp, 'poster.json');
+const runPoster = (manifest, output = path.join(posterTmp, 'out')) => {
+  fs.writeFileSync(posterArgs, JSON.stringify({ manifest, output_dir: output }));
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'run.js'), 'poster_render', posterArgs], { encoding: 'utf8', timeout: 30000, env: { ...process.env, MYSTIC_STUDIO_CONFIG: posterCfg } });
+  return { status: r.status, body: JSON.parse(r.stdout.trim()) };
+};
+const mismatch = runPoster({ ...posterBase, text: [{ ...posterBase.text[0], font: { ...posterBase.text[0].font, sha256: fontHash.slice(0, 32) + '0'.repeat(32) } }] });
+assert(mismatch.body.ok === false && /SHA256 mismatch/.test(mismatch.body.error), 'poster rejects font hash mismatch');
+assert(fs.readdirSync(path.join(posterTmp, 'out')).length === 0, 'poster hash failure leaves no output');
+const symlink = path.join(posterTmp, 'font-link.ttf');
+fs.symlinkSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', symlink);
+const linked = runPoster({ ...posterBase, text: [{ ...posterBase.text[0], font: { ...posterBase.text[0].font, path: symlink, sha256: crypto.createHash('sha256').update(fs.readFileSync(symlink)).digest('hex') } }] });
+assert(linked.body.ok === false && /non-symlink/.test(linked.body.error), 'poster rejects symlink escape');
+const image = path.join(posterTmp, 'fixture.png');
+fs.writeFileSync(image, Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c6300010000050001od', 'hex'));
+const imageHash = crypto.createHash('sha256').update(fs.readFileSync(image)).digest('hex');
+const imageManifest = { ...posterBase, images: [{ id: 'photo', asset: { path: image, sha256: imageHash.slice(0, 32) + '0'.repeat(32) }, source_width: 1, source_height: 1, source: { x: 0, y: 0, width: 1, height: 1 }, dest: { x: 0, y: 0, width: 1, height: 1 } }] };
+const imageMismatch = runPoster(imageManifest);
+assert(imageMismatch.body.ok === false && /asset SHA256 mismatch/.test(imageMismatch.body.error), 'poster rejects image hash mismatch');
+const outside = runPoster({ ...posterBase, text: [{ ...posterBase.text[0], font: { ...posterBase.text[0].font, path: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', sha256: crypto.createHash('sha256').update(fs.readFileSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')).digest('hex') } }] });
+assert(outside.body.ok === false && /outside allowed read dirs/.test(outside.body.error), 'poster rejects outside allowDirs');
+assert(fs.statSync(posterFont).mtimeMs > 0 && fs.readdirSync(path.join(posterTmp, 'out')).length === 0, 'poster sources and output remain clean after failures');
 
 // 5. unknown tool -> clean MCP error
 const bad = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], {
