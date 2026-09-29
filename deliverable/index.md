@@ -1,20 +1,20 @@
-# Poster render proof
+# Deterministic poster_render review evidence
 
-- `poster/poster.png` — 300×450 lossless RGBA PNG; transparent background and source alpha are preserved.
-- `poster/poster.pdf` — one-page 144×216 pt (2×3 inch / 150 DPI) PDF with extractable Vietnamese text.
-- `poster/source.html` — editable self-contained source with data-URI image/fonts and script-blocking CSP.
-- `poster/qa-receipt.json` — checksums, source/output dimensions, validation facts, provenance and limitations.
+This folder contains a generic renderer **TEST FIXTURE** only. It contains no customer, TRI ÂN, Phoenix Live, Mystic Wellness, face, or private HQ asset.
 
-## Verification
+- `poster-test-fixture.png` — lossless 1200×1500 RGBA output at the requested 4:5 canvas.
+- `poster-test-fixture.pdf` — one-page RGB PDF, 288×360 pt / 4×5 inches at 300 DPI.
+- `poster-test-fixture.html` — self-contained editable HTML/SVG source with data-URI image/font resources and script/network-blocking CSP.
+- `poster-test-fixture.qa.json` — runtime-observed dimensions, decoded source dimensions, exact font faces, checksums, validation, provenance and limitations; no invented test exit codes.
+- `poster-test-fixture-alpha.png` — original 800×800 geometric RGBA source fixture used for crop/alpha proof.
+- `poster-test-fixture.checksums.json` — SHA256 hashes of the PNG, PDF, HTML, QA and alpha-source artifacts.
+- `poster-test-fixture-proof.json` — actual direct/CLI/MCP/HTTP, PDF and negative-check results from the browser integration harness.
+- `test-receipt.md` — exact source-bound commands and exit codes from the final acceptance run.
 
-- Base and head SHA: `0552616b67d9965a6b970a3492ca7f7fd14b9cb5` (worker leaves changes unstaged).
-- `npm test` — exit `0`; offline smoke and negative hash/path/symlink/source-safety tests pass.
-- `MYSTIC_STUDIO_REPO_SHA=$(git rev-parse HEAD) npm run test:browser` — exit `0`; real Chromium PNG/PDF/text/Vietnamese/alpha/original-byte/overflow checks pass.
-- `git diff --check` — exit `0`.
-- Vision self-check (`python3 /home/runner/work/_temp/hq-toolbelt/scripts/vlm-check.py deliverable/poster/poster.png`) — exit `0`, `VERDICT: PASS`.
+The fixture uses literal Vietnamese text `Kiểm tra chữ Việt — Đặng Ánh`, restrained charcoal/ivory/gold, and two font-family aliases backed by one portable local font file. The first image uses a nonzero asymmetric source crop; a second small crop sits near the page edge so PDF/PNG physical scaling is checked at more than one location.
 
-## Limits
+The browser integration exercises direct dispatch, CLI, stdio MCP and HTTP, then checks schema equality, decoded-dimension mismatch, unsupported DPI, unknown manifest fields, text overflow, hash/symlink/path safety, source-byte preservation, alpha, image-only/text-only vacuous validation, PDF text, and rendered PDF/PNG content alignment.
 
-- RGB PNG/PDF only: not CMYK, PDF/X, print-ready, artist-approved, or face-identity verified.
-- Enlargement is interpolation and is flagged, never described as native added detail.
-- `poster_render` is stdio/REST dispatch through the existing Studio surfaces, not live ChatGPT registration.
+Actual PNG and PDF-raster pixels were inspected after the clean-source run: Vietnamese glyphs are intact, the asymmetric geometry matches, no text clips, and the edge marker appears in the same physical location. This is renderer proof only: RGB output is not CMYK/PDF-X or print-readiness certification, and technical proof is not artistic approval.
+
+The repository exposes CLI, stdio MCP and localhost HTTP surfaces. Those do not constitute native ChatGPT Work/plugin registration; the remaining integration gap is a separately authorized authenticated reachable HTTPS endpoint plus the product-side registration mechanism actually available at that time.
