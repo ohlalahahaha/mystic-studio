@@ -100,6 +100,23 @@ curl -s localhost:7817/v1/call -d '{"name":"photo_generate","arguments":{"prompt
 
 ## Tools
 
+### Deterministic poster rendering
+
+`poster_render` assembles a typed manifest—never arbitrary HTML—into an isolated folder containing a lossless RGBA PNG, a one-page PDF at the requested physical size, editable self-contained HTML source, and `qa-receipt.json`. It accepts only local image/font files with mandatory SHA256 hashes and explicit source/destination bounds; callers must specify every crop. The manifest schema is shared by CLI, stdio MCP and HTTP and rejects unknown fields. It rejects remote URLs, path traversal, symlinks outside `allowDirs`, oversized resources, excessive layers, invalid fonts, mismatched decoded source dimensions, accidental text overflow, and missing assets.
+
+Supported poster DPI is **48–960**. That range maps directly to Chromium's supported PDF scale without silent clamping. Image crops use the original decoded asset dimensions, so an asymmetric crop changes only the SVG viewBox; the nested image stays at `x=0,y=0` at its original source width/height. Browser networking and page scripts are blocked.
+
+```sh
+mystic-studio poster-render manifest.json --output-dir ~/Desktop/posters
+# 4:5 example: manifest.canvas = { "width": 1200, "height": 1500, "dpi": 300 }
+# manifest.images[]: id, asset { path, sha256 }, source_width/height, explicit source and dest bounds
+# manifest.text[]: id, literal text, font { family, path, sha256, size, weight }, explicit bounds and typography
+```
+
+The runtime QA receipt contains observed render facts only: source hashes/decoded dimensions, output dimensions, PDF physical size, loaded font faces, validation results, output checksums, limitations, and source-file provenance. Test command/exit-code evidence belongs in the separate test receipt, never in the runtime receipt. Output is RGB, not CMYK or PDF/X; a technical pass is not print-readiness, artistic approval, or face-identity verification. Enlargement is flagged as interpolation, never native added detail.
+
+`npm test` is offline-safe and uses a portable local font fixture on macOS/Linux. `npm run test:browser` is the opt-in real-browser integration suite; it needs `playwright-core`, a Chromium/Chrome binary, Pillow, and a platform PDF text/raster path. The test itself makes no model, media-generation, or paid provider call.
+
 | Tool | What it does | Costs money? |
 |---|---|---|
 | `photo_see` | Photography critique: composition, light, defects, print-readiness, SCORE /100 | no |
@@ -115,6 +132,7 @@ curl -s localhost:7817/v1/call -d '{"name":"photo_generate","arguments":{"prompt
 | `video_see` | Scene summary, timestamped timeline, transcription, quality verdict | no |
 | `video_keyframes` | N evenly-spaced frames as JPGs | no |
 | `video_gif` | Two-pass palette GIF from a video span | no |
+| `poster_render` | Deterministic typed-manifest poster assembly: PNG, PDF, source and QA receipt | no |
 | `studio_doctor` | Dependency check with fix instructions | no |
 | `photo_generate` | Text → image: higgsfield (default) or Z.ai GLM-Image (`provider: "glm"`, $0.015/image) | **credits / paid API** |
 | `photo_edit` | Instruction-based image edit | **credits** |
@@ -149,11 +167,11 @@ the model wants to say SHIP.
 - **CLI** — for humans and shell agents: `mystic-studio see|shot|review|recheck|vsee|vgif|doctor|serve`
 - **`mystic-coding-room`** — bonus: run an external coding agent on a repo under a written contract with a verdict, a one-writer lock, and a 25-minute watchdog. Bring your own runner (any command with the interface in `coding-room.js`). See `SECURITY.md` for its honest limits.
 
-## ChatGPT connector
+## ChatGPT / remote integration status
 
-1. Run `mystic-studio-http` on a machine ChatGPT can reach (set `MYSTIC_STUDIO_TOKEN` first).
-2. In ChatGPT: Settings → Connectors → Create → point the Action at `https://your-host:7817/v1` and paste `/v1/tools` output as the action list.
-3. Ask ChatGPT to review a URL — it gets the same verdicts your coding agent does.
+The repository exposes three working surfaces: CLI, stdio MCP, and the localhost HTTP API. Those surfaces do **not** by themselves register `poster_render` as a native ChatGPT Work/plugin tool.
+
+The existing GitHub route can carry reviewed source changes and evidence, but it is source delivery—not tool registration. A future ChatGPT-native integration still needs a real authenticated HTTPS endpoint for the HTTP surface plus the product-side registration/connection mechanism available to the account at that time. This repository does not create that endpoint, change OAuth/account settings, or claim that registration has been completed.
 
 ## Configuration
 

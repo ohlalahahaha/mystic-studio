@@ -31,8 +31,13 @@ function handle(m) {
     send({ jsonrpc: '2.0', id, result: { tools: TOOLS } });
   } else if (method === 'tools/call') {
     const { name, arguments: args } = m.params || {};
-    try { send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: String(dispatch(name, args || {})) }] } }); }
-    catch (e) { send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `ERROR: ${e.message}` }], isError: true } }); }
+    try {
+      Promise.resolve(dispatch(name, args || {})).then((text) => {
+        send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: String(text) }] } });
+      }, (e) => {
+        send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `ERROR: ${e.message}` }], isError: true } });
+      });
+    } catch (e) { send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: `ERROR: ${e.message}` }], isError: true } }); }
   } else if (id !== undefined) {
     send({ jsonrpc: '2.0', id, error: { code: -32601, message: `method not found: ${method}` } });
   }

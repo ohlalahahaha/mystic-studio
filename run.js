@@ -11,8 +11,12 @@ if (!name) { console.error('usage: run.js <tool> [args.json]'); process.exit(2);
 let args = {};
 if (argsPath) { try { args = JSON.parse(fs.readFileSync(argsPath, 'utf8')); } catch (e) { console.log(JSON.stringify({ ok: false, error: `bad args json: ${e.message}` })); process.exit(1); } }
 try {
-  const text = dispatch(name, args);
-  console.log(JSON.stringify({ ok: true, text: String(text) }));
+  Promise.resolve(dispatch(name, args)).then((text) => {
+    console.log(JSON.stringify({ ok: true, text: String(text) }));
+  }, (e) => {
+    console.log(JSON.stringify({ ok: false, error: e.message }));
+    process.exit(1);
+  });
 } catch (e) {
   console.log(JSON.stringify({ ok: false, error: e.message }));
   process.exit(1);

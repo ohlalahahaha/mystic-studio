@@ -1,0 +1,142 @@
+{
+  "operation": "poster_render",
+  "manifest_sha256": "ff1790c9b9b087fbf1d99c4904bd0eccc07f24122f9f391345a5ec90dedde390",
+  "source_files": [
+    {
+      "path": "/private/tmp/studio-poster-browser-qZfItM/geometric-alpha.png",
+      "sha256": "96fa9cf5a6369942961ff0869a5f28a82e7e3e2faaecd2cc74dfb8bc7b56995f",
+      "bytes": 5715
+    },
+    {
+      "path": "/private/tmp/studio-poster-browser-qZfItM/fixture.ttf",
+      "sha256": "525979822591a3447cfc49d943d6f7683508e25543407871c0ed8fed05fd2bd9",
+      "bytes": 773236
+    }
+  ],
+  "source_dimensions": [
+    {
+      "id": "geometry",
+      "width": 800,
+      "height": 800,
+      "declared_width": 800,
+      "declared_height": 800,
+      "crop": {
+        "x": 80,
+        "y": 70,
+        "width": 620,
+        "height": 660
+      }
+    },
+    {
+      "id": "edge-mark",
+      "width": 800,
+      "height": 800,
+      "declared_width": 800,
+      "declared_height": 800,
+      "crop": {
+        "x": 100,
+        "y": 80,
+        "width": 260,
+        "height": 220
+      }
+    }
+  ],
+  "output_dimensions": {
+    "width": 1200,
+    "height": 1500
+  },
+  "pdf_page_points": {
+    "width": 288,
+    "height": 360
+  },
+  "pdf_physical_inches": {
+    "width": 4,
+    "height": 5
+  },
+  "font_faces": [
+    {
+      "family": "Fixture Sans",
+      "status": "loaded",
+      "weight": "400"
+    },
+    {
+      "family": "Fixture Display",
+      "status": "loaded",
+      "weight": "700"
+    }
+  ],
+  "enlarged_layers": [],
+  "validation": {
+    "fonts_ready": true,
+    "images_nonzero": true,
+    "literal_text_verified": true,
+    "accidental_text_overflow": false,
+    "intentional_layer_overlaps": []
+  },
+  "outputs": [
+    "source.html",
+    "poster.png",
+    "poster.pdf"
+  ],
+  "checksums": {
+    "source.html": "28b7f2b32a9772cb33d54aba86c6201e3902cdf5459b24e9f40354bf88943e64",
+    "poster.png": "3597da7fc58ffe5612f2613d1bbd7fcd94ef2b6669c9ecdf7d5cde25d6e05831",
+    "poster.pdf": "41cf4dafc1573764bf3bb9481e6434349a2d11a7820f8e8f175d3f41bccdd877"
+  },
+  "technical_pass": true,
+  "limitations": [
+    "RGB raster/PDF, not CMYK or PDF/X; not a print-readiness certification.",
+    "Technical pass is not final artistic approval or face-identity verification."
+  ],
+  "provenance": {
+    "repository_base_commit": "9969fc4016fdf0dd152e0d326bcb718202b666ae",
+    "repository_base_tree": "c6ae3c7cccaa4fe81f201df58b56ab5079549b80",
+    "repository_head_if_clean": "9969fc4016fdf0dd152e0d326bcb718202b666ae",
+    "working_tree_dirty": false,
+    "source_ref_env": null,
+    "implementation_files": [
+      {
+        "path": "lib/poster.js",
+        "sha256": "99dcc990ae0d05e68ad3afcc3ed2160a1b63df158a03bfc08cb17085f4517e8e"
+      },
+      {
+        "path": "lib/core.js",
+        "sha256": "6743c75451a1974ff6747faf57d3e1a4bfb6559228349043c6c68f557afabc93"
+      },
+      {
+        "path": "run.js",
+        "sha256": "a105c3d9d5d0122e113b1371ca659bb040ac414a73e385a35aa90c2a1b2907bc"
+      },
+      {
+        "path": "server.js",
+        "sha256": "838b720be757cae1ae00f24991ac7f58f5b445fef4e4b6961582eafe3c54eea1"
+      },
+      {
+        "path": "cli.js",
+        "sha256": "5655817fb75b82406398f551730cba66b3faed1ff05c8d590063d001f3da9796"
+      },
+      {
+        "path": "test/browser-poster.js",
+        "sha256": "1c8ddb86f197b6cb275decf34793d5958b7d8fffa0c37b22a41f540ce51fa413"
+      },
+      {
+        "path": "test/smoke.js",
+        "sha256": "d963986450540c69b19bbc0136bcd1410dc2ff4b137e86c64d379c66ce6306f1"
+      },
+      {
+        "path": "README.md",
+        "sha256": "db6e332ed1001d06680b99f1a1f78539094ab5891b2e293e2ecc12e7bd1c263e"
+      },
+      {
+        "path": "package.json",
+        "sha256": "ac256ca1d64db4f75dc8c3be8ceff5a7ae0a0b69a00a4af42cb5852772944e25"
+      }
+    ]
+  },
+  "browser_controls": {
+    "context_offline": true,
+    "http_https_routes": "aborted",
+    "content_security_policy": "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'"
+  },
+  "created": "2026-09-29T14:42:26.099Z"
+}
