@@ -145,8 +145,9 @@ for (const s of ['banana', '1000x1000', '2049x1024', '480x640', '1280', '']) ass
 assert.deepStrictEqual(Object.keys(glm.ASPECT_MAP), ['1:1', '16:9', '9:16'], 'aspect map is the documented trio');
 assert.strictEqual(glm.provider({ imageProvider: 'higgsfield' }, {}), 'higgsfield', 'config default provider kept');
 assert.strictEqual(glm.provider({}, { provider: 'GLM' }), 'glm', 'explicit provider wins, case-tolerant');
-assert.throws(() => glm.provider({}, { provider: 'openai' }), /known providers/, 'unknown provider refused');
-assert.throws(() => glm.provider({ imageProvider: 'openai' }, {}), /known providers/, 'bad config provider refused');
+assert.strictEqual(glm.provider({}, { provider: 'openai' }), 'openai', 'explicit openai provider accepted');
+assert.throws(() => glm.provider({}, { provider: 'not-a-provider' }), /known providers/, 'unknown provider refused');
+assert.throws(() => glm.provider({ imageProvider: 'not-a-provider' }, {}), /known providers/, 'bad config provider refused');
 const glmSig = path.join(os.tmpdir(), 'glm-sig-test.png');
 fs.writeFileSync(glmSig, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
 assert(glm.isImageFile(glmSig), 'png signature detected');
@@ -154,7 +155,7 @@ fs.writeFileSync(glmSig, '<html>not an image</html>');
 assert(!glm.isImageFile(glmSig), 'html refused by signature check');
 fs.unlinkSync(glmSig);
 const pgTool = TOOLS.find((t) => t.name === 'photo_generate');
-assert.deepStrictEqual(pgTool.inputSchema.properties.provider.enum, ['higgsfield', 'glm', 'gemini'], 'provider enum on photo_generate');
+assert.deepStrictEqual(pgTool.inputSchema.properties.provider.enum, ['higgsfield', 'glm', 'gemini', 'openai'], 'provider enum on photo_generate');
 assert(pgTool.inputSchema.properties.size && pgTool.inputSchema.properties.quality, 'glm size/quality in schema');
 assert(/\$0\.015/.test(pgTool.description) && /SPENDS/.test(pgTool.description) && /No silent provider fallback/.test(pgTool.description), 'paid + no-fallback labelled');
 assert(TOOLS.find((t) => t.name === 'photo_edit').inputSchema.properties.provider, 'photo_edit accepts provider (to reject glm explicitly)');
@@ -386,13 +387,17 @@ if (/playwright=OK/.test(chk.stdout) && /browser=OK/.test(chk.stdout)) {
     return { status: r.status, body, raw: String(r.stdout || '') + String(r.stderr || '') };
   };
   const def = await glmRun('photo_generate', { prompt: 'plain harbor' });
-  assert(def.body.ok === true && /higgs-ran:image plain harbor/.test(def.body.text), 'default provider still higgsfield with same args');
+  assert(def.body.ok === true && /higgs-ran:image plain harbor --out /.test(def.body.text), 'default higgsfield generate records output directory');
+  const higgsModel = await glmRun('photo_generate', { prompt: 'modelled harbor', model: 'higgs-model-x' });
+  assert(higgsModel.body.ok === true && /-m higgs-model-x/.test(higgsModel.body.text), 'generate forwards explicit higgsfield model');
   assert.strictEqual(state.gen.length, 0, 'default path makes zero glm calls');
   const happy = await glmRun('photo_generate', { prompt: 'sunset pier', provider: 'glm', size: '1728X960', quality: 'hd' });
   assert(happy.body.ok === true, 'glm happy path succeeds: ' + (happy.body.error || ''));
   assert(/saved: /.test(happy.body.text) && /\$0\.015/.test(happy.body.text) && /1728x960/.test(happy.body.text), 'result reports file/size/price');
   const saved = happy.body.text.split('\n').find((l) => l.startsWith('saved: ')).slice(7);
   assert(path.isAbsolute(saved) && saved.startsWith(glmOut) && fs.existsSync(saved) && glm.isImageFile(saved), 'png really saved in outDir');
+  const higgsEdit = await glmRun('photo_edit', { image: saved, instruction: 'brighten', model: 'higgs-edit-x' });
+  assert(higgsEdit.body.ok === true && /higgs-ran:edit .* -p brighten --out .* -m higgs-edit-x/.test(higgsEdit.body.text), 'edit forwards instruction, output directory, and model');
   assert.strictEqual(state.gen[0].path, '/images/generations', 'documented endpoint path');
   assert.strictEqual(state.gen[0].auth, 'Bearer fake-test-key-not-real', 'generation carries bearer auth');
   assert.deepStrictEqual(state.gen[0].body, { model: 'glm-image', prompt: 'sunset pier', size: '1728x960', quality: 'hd' }, 'request body normalized');
@@ -407,7 +412,7 @@ if (/playwright=OK/.test(chk.stdout) && /browser=OK/.test(chk.stdout)) {
     [{ prompt: 'x', provider: 'glm', model: 'glm-image-ultra' }, /unsupported model/, 'foreign model'],
     [{ prompt: 'x', provider: 'glm', image: '/tmp/a.png' }, /text-to-image only/, 'image input refused'],
     [{ prompt: '', provider: 'glm' }, /non-empty text prompt/, 'empty prompt'],
-    [{ prompt: 'x', provider: 'openai' }, /known providers/, 'unknown provider'],
+    [{ prompt: 'x', provider: 'not-a-provider' }, /known providers/, 'unknown provider'],
   ]) {
     const bad = await glmRun('photo_generate', args);
     assert(bad.body.ok === false && re.test(bad.body.error), tag + ' fails cleanly');

@@ -245,8 +245,8 @@ const fileCount = (dir) => fs.readdirSync(dir).length;
 
   const pe = TOOLS.find((t) => t.name === 'photo_edit');
   assert(pe.inputSchema.properties.model && pe.inputSchema.properties.aspect_ratio, 'photo_edit schema exposes gemini model/aspect_ratio');
-  assert.deepStrictEqual(TOOLS.find((t) => t.name === 'photo_generate').inputSchema.properties.provider.enum, ['higgsfield', 'glm', 'gemini'], 'photo_generate enum');
-  assert.deepStrictEqual(pe.inputSchema.properties.provider.enum, ['higgsfield', 'glm', 'gemini'], 'photo_edit enum');
+  assert.deepStrictEqual(TOOLS.find((t) => t.name === 'photo_generate').inputSchema.properties.provider.enum, ['higgsfield', 'glm', 'gemini', 'openai'], 'photo_generate enum');
+  assert.deepStrictEqual(pe.inputSchema.properties.provider.enum, ['higgsfield', 'glm', 'gemini', 'openai'], 'photo_edit enum');
 
   fs.rmSync(input, { force: true }); fs.rmSync(notImg, { force: true }); fs.rmSync(path.dirname(badPath), { recursive: true, force: true });
   srv.close();

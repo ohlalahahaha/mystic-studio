@@ -21,8 +21,10 @@ function usage() {
   mystic-studio generate "<prompt>" [--ar 16:9] [--model m]     spends credits
   mystic-studio generate "<prompt>" --provider glm [--size 1280x1280] [--quality hd]  paid API ($0.015/image)
   mystic-studio generate --provider gemini --prompt "<p>" [--ar 16:9]  paid API (native Nano Banana)
+  mystic-studio generate --provider openai --prompt "<p>" [--ar 16:9] [--quality high] [--output-format png]  paid API (gpt-image-2)
   mystic-studio edit <image> -p "<instruction>"                 spends credits
   mystic-studio edit <image> -p "<instruction>" --provider gemini  paid API (native Nano Banana edit)
+  mystic-studio edit <image> -p "<instruction>" --provider openai [--size auto] [--quality high]  paid API (gpt-image-2 edit)
   mystic-studio catalog [kind]
   mystic-studio vsee <video> [--focus "..."] [--deep]
   mystic-studio vkey <video> [--count 8]
