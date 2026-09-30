@@ -6,3 +6,4 @@ mystic-studio.config.json
 .DS_Store
 test-out/
 workbox-starter/output/
+.playwright-mcp/

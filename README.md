@@ -73,9 +73,9 @@ mystic-studio polish --url http://localhost:3000 --repo ~/code/mysite --max-roun
 
 **Runnable prototype:** `mystic-studio motion-build --headline "A considered collection" --description "Original objects for everyday living." --action "Enquire" --destination "mailto:studio@example.com" --motion gsap,lenis` exports one responsive HTML section in the configured output directory. It has an original CSS visual, a real CTA, static fallback, reduced-motion handling, and optional GSAP/Lenis scripts loaded from pinned public CDNs. Identical inputs overwrite the same filename. Render it at 1440, 390 and 320 pixels, then check its output and page health before adapting it to a real brief. This is a prototype, not a reference-faithful customer deliverable. Vanta and React Bits remain project-specific because they require a WebGL dependency or a React project; `motion` shows their integration guards.
 
-## Image generation — higgsfield or Z.ai GLM-Image
+## Image generation — higgsfield, Z.ai GLM-Image, or native Gemini (Nano Banana)
 
-`photo_generate` is paid. Two providers, explicit selection, no silent fallback:
+`photo_generate` is paid. Four providers, explicit selection, no silent fallback:
 
 ```sh
 # higgsfield CLI (default — prepaid credits)
@@ -83,9 +83,19 @@ mystic-studio generate "a foggy harbor at dawn" --ar 16:9
 
 # Z.ai hosted GLM-Image — paid API, $0.015/image, text-to-image only
 mystic-studio generate "a foggy harbor at dawn" --provider glm --size 1728x960 --quality hd
+
+# native Gemini "Nano Banana" — paid API usage billed by Google separately from any chat subscription
+
+# OpenAI GPT Image — paid API usage billed by OpenAI
+mystic-studio generate --provider openai --prompt "a foggy harbor at dawn" --ar 16:9 --quality high --output-format png
+mystic-studio edit input.png -p "keep the subject and replace the sky" --provider openai --size 1536x1152 --quality high
+mystic-studio generate --provider gemini --prompt "a foggy harbor at dawn" --ar 16:9
+mystic-studio generate --provider gemini --prompt "a foggy harbor at dawn" --model gemini-2.5-flash-image
+mystic-studio edit ~/Desktop/mystic-studio/harbor.png -p "make the sky golden" --provider gemini
 ```
 
-- **Provider selection:** pass `provider` per call (`"higgsfield"` or `"glm"`) or set `"imageProvider"` in config (default `higgsfield`, so existing setups keep working). An unknown provider, a missing key, or a failed call is an error — mystic-studio never quietly switches provider.
+- **Provider selection:** pass `provider` per call (`"higgsfield"`, `"glm"`, or `"gemini"`) or set `"imageProvider"` in config (default `higgsfield`, so existing setups keep working). An unknown provider, a missing key, or a failed call is an error — mystic-studio never quietly switches provider or retries.
+- **OpenAI provider:** direct documented Image API (no SDK dependency), model `gpt-image-2`, generate and edit. Aspect mappings preserve ratio (`16:9` = `1536x864`, `4:3` = `1536x1152`); custom sizes must be multiples of 16 with max edge 3840, area 655360-8294400, and ratio <=3. Edits always use high input fidelity: `input_fidelity` is not sent and cannot be overridden. The adapter validates source dimensions/trailer before the paid call, saves native bytes, and writes a receipt; a receipt failure never deletes paid output. Timeouts are terminal and ambiguous — no retry, duplicate render, or provider fallback.
 - **GLM-Image is text-to-image only.** `photo_edit` with `provider: "glm"` is rejected explicitly — the hosted API has no image input; editing stays on higgsfield (pass `provider: "higgsfield"` explicitly). No self-hosting; only the hosted `glm-image` model is used and other model names are rejected. Provider API errors are reported as sanitized status + error codes — response bodies are never echoed.
 - **Sizes:** default `1280x1280`; recommended set: `1568x1056`, `1056x1568`, `1472x1088`, `1088x1472`, `1728x960`, `960x1728`; custom sizes with both sides a multiple of 32 within 512–2048. `aspect_ratio` maps `1:1`/`16:9`/`9:16` to the recommended square/landscape/portrait sizes; other ratios must pass `size` explicitly.
 - **Key:** `ZAI_API_KEY` in your shell, `~/.config/mystic-studio/.env`, or the canonical `~/.config/mystic/.env`. It is used server-side only: sent as a Bearer header to `api.z.ai` for the generation call and **never** to the image download host; never logged or printed. A missing key gives an actionable error, not a fallback.
@@ -116,7 +126,7 @@ curl -s localhost:7817/v1/call -d '{"name":"photo_generate","arguments":{"prompt
 | `video_keyframes` | N evenly-spaced frames as JPGs | no |
 | `video_gif` | Two-pass palette GIF from a video span | no |
 | `studio_doctor` | Dependency check with fix instructions | no |
-| `photo_generate` | Text → image: higgsfield (default) or Z.ai GLM-Image (`provider: "glm"`, $0.015/image) | **credits / paid API** |
+| `photo_generate` | Text → image: higgsfield (default), GLM-Image, Gemini, or OpenAI (`gpt-image-2`) | **credits / paid API** |
 | `photo_edit` | Instruction-based image edit | **credits** |
 | `studio_catalog` | List available generation models | no |
 
@@ -168,13 +178,15 @@ the model wants to say SHIP.
 | `codingRunner` | `glm-run` | command `mystic-coding-room` drives |
 | `imageProvider` | `higgsfield` | default for `photo_generate` — per-call `provider` wins; `glm` = Z.ai GLM-Image |
 | `glmImageBase` | `https://api.z.ai/api/paas/v4` | GLM-Image API base override (for testing) |
+| `openaiImageBase` | `https://api.openai.com/v1` | OpenAI Image API base override (for testing) |
+| `openaiImageModel` | `gpt-image-2` | explicit OpenAI image model |
 | `canonicalEnvFile` | `~/.config/mystic/.env` | extra secret file consulted for `ZAI_API_KEY` if not found elsewhere |
 
 ## Requirements
 
 - Node ≥ 18, curl
 - A free Gemini API key (all analysis)
-- Optional: `ffmpeg` (video tools — `brew install ffmpeg` / `apt install ffmpeg`), a Chromium for screenshots (`npx playwright install chromium`), the [higgsfield CLI](https://github.com/Open-Higgsfield-AI) or a [Z.ai](https://z.ai) API key (image generation — GLM-Image is $0.015/image, paid)
+- Optional: `ffmpeg` (video tools — `brew install ffmpeg` / `apt install ffmpeg`), a Chromium for screenshots (`npx playwright install chromium`), the [higgsfield CLI](https://github.com/Open-Higgsfield-AI) or a [Z.ai](https://z.ai) API key (image generation — GLM-Image is $0.015/image, paid), or an OpenAI API key (`provider: "openai"`; paid)
 - `mystic-studio doctor` tells you exactly which of these you're missing and how to install them.
 
 ## Proven
