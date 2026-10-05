@@ -3,11 +3,10 @@
 // Sections: FIXTURES -> UNIT -> E2E -> IDEMPOTENCY -> FAILURE -> QC-NEGATIVE -> OPERATOR SURFACE
 // Optional non-blocking public smoke: MYSTIC_VIDEO_SMOKE_URL=<direct media url> node test/video.js
 
-const { spawnSync } = require('child_process');
+const { spawnSync, spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const http = require('http');
 const assert = require('assert');
 
 const ROOT = path.join(__dirname, '..');
@@ -59,32 +58,16 @@ fs.writeFileSync(transcriptFix, JSON.stringify({ segments: [
 ok(edit.probe(land).durationSec > 7 && edit.probe(land).hasAudio, 'fixtures generated and parseable');
 ok(fs.statSync(corrupt).size === 65536, 'corrupt fixture is a truncated mp4');
 
-console.log('== LOCAL HTTP SERVER ==');
-const server = http.createServer((req, res) => {
-  const p = new URL(req.url, 'http://x').pathname;
-  if (p === '/landscape.mp4') {
-    const buf = fs.readFileSync(land);
-    res.writeHead(200, { 'content-type': 'video/mp4', 'content-length': buf.length });
-    res.end(buf);
-  } else if (p === '/fake.mp4') {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end('<html>definitely not a video</html>');
-  } else if (p === '/watch') {
-    res.writeHead(200, { 'content-type': 'text/html' });
-    res.end('<html>page that a safe adapter must not blindly download</html>');
-  } else if (p === '/slow.mp4') {
-    setTimeout(() => { res.writeHead(200, { 'content-type': 'video/mp4' }); res.end('x'); }, 30000);
-  } else if (p === '/big.mp4') {
-    res.writeHead(200, { 'content-type': 'video/mp4', 'content-length': 104857600 });
-    res.write('0123456789');
-  } else { res.writeHead(404); res.end('nope'); }
-});
-let PORT = 0;
-server.listen(0, '127.0.0.1', () => { PORT = server.address().port; });
-function waitPort() { for (let i = 0; i < 50 && !PORT; i++) spawnSync('sleep', ['0.1']); ok(PORT > 0, 'test http server up on ' + PORT); }
-waitPort();
+console.log('== LOCAL HTTP SERVER (child process; parent blocks on spawnSync) ==');
+const portFile = path.join(TMP, 'fixture-port');
+const srv = spawn(process.execPath, [path.join(__dirname, 'video-fixture-server.js'), land, portFile], { stdio: ['ignore', 'ignore', 'inherit'] });
+for (let i = 0; i < 400 && !fs.existsSync(portFile); i++) spawnSync('sleep', ['0.05']);
+const PORT = Number(fs.readFileSync(portFile, 'utf8').trim());
+ok(PORT > 0, 'test http server up on ' + PORT);
+main();
 
-console.log('== UNIT ==');
+function main() {
+  console.log('== UNIT ==');
 ok(fetchLane.classify('/tmp/x.mov') === 'file', 'classify: file');
 ok(fetchLane.classify('https://e.com/a/b.mp4?dl=1') === 'url', 'classify: direct url by extension');
 ok(fetchLane.classify('https://e.com/watch?v=1') === 'page', 'classify: page url');
@@ -197,7 +180,9 @@ console.log('== OPERATOR SURFACE (run.js = HTTP/MCP path, cli.js = human path) =
   const r = spawnSync(process.execPath, [path.join(ROOT, 'run.js'), 'video_run', argsFile], { encoding: 'utf8', timeout: 300000, maxBuffer: 16 * 1024 * 1024 });
   let j = null; try { j = JSON.parse(r.stdout.trim().split('\n').filter(Boolean).pop()); } catch {}
   ok(j && j.ok === true && /complete/.test(j.text), 'run.js video_run end-to-end (HTTP job path)', r.stdout + r.stderr);
-  const st = spawnSync(process.execPath, [path.join(ROOT, 'run.js'), 'video_status', JSON.stringify({ job: j && j.text ? (j.text.match(/job ([a-f0-9]{12})/) || [])[1] : '' })], { encoding: 'utf8', timeout: 30000 });
+  const stArgs = path.join(TMP, 'status-args.json');
+  fs.writeFileSync(stArgs, JSON.stringify({ job: j && j.text ? (j.text.match(/job ([a-f0-9]{12})/) || [])[1] : '', out: path.join(TMP, 'cli-jobs') }));
+  const st = spawnSync(process.execPath, [path.join(ROOT, 'run.js'), 'video_status', stArgs], { encoding: 'utf8', timeout: 30000, maxBuffer: 16 * 1024 * 1024 });
   ok(/video_status/.test(st.stdout || ''), 'run.js video_status reachable');
   const cli = spawnSync(process.execPath, [path.join(ROOT, 'cli.js'), 'video', land, '--preset', 'master', '--out', path.join(TMP, 'cli2')], { encoding: 'utf8', timeout: 300000, maxBuffer: 16 * 1024 * 1024 });
   ok(cli.status === 0 && /complete/.test(cli.stdout || ''), 'cli.js video <file> one-command operator run', (cli.stderr || '').slice(0, 200));
@@ -213,8 +198,9 @@ if (process.env.MYSTIC_VIDEO_SMOKE_URL) {
   console.log('SKIP public smoke (set MYSTIC_VIDEO_SMOKE_URL to enable; core CI is network-independent)');
 }
 
-server.close();
+try { srv.kill(); } catch {}
 console.log(`\nVIDEO FACTORY TEST MATRIX: ${passed} passed, ${failures.length} failed`);
 if (failures.length) { console.log('FAILED:', failures.join(' | ')); process.exit(1); }
 console.log(`tmpdir kept for inspection: ${TMP}`);
 process.exit(0);
+}
