@@ -184,3 +184,58 @@ Built and battle-tested on a working estate before release: wedding-industry cli
 ## License
 
 MIT
+
+---
+
+## Phoenix Video Factory (V1)
+
+Deterministic, ffmpeg-only video pipeline attached to the Studio's existing tool surface (CLI + HTTP `/v1/call` + MCP). Real footage is primary; generative providers are optional gap-fill and are **not** required or called by default. Fetch law: user-provided / owned / licensed / public sources only — no DRM, paywall or login bypass, ever.
+
+### One command
+
+```sh
+mystic-studio video <file-or-url> --preset master|social|singing --out DIR
+mystic-studio vstatus <jobId|jobDir> [--out DIR]
+```
+
+HTTP/MCP (async jobs, no new routes needed):
+
+```sh
+curl -s localhost:7817/v1/call -d '{"name":"video_run","arguments":{"input":"https://example.com/clip.mp4","preset":"social","out":"/tmp/jobs"}}'
+# -> 202 {job_id} -> GET /v1/jobs/<id>
+```
+
+MCP tools: `video_run`, `video_status` (appear automatically in `tools/list`).
+
+### Presets
+
+- `master` — H.264/AAC MP4, keep-AR downscale-only ≤1080p, loudness normalized to **-16 LUFS / TP -1.5 dB** (measured, reported), faststart, fade-in/out.
+- `social` — master + vertical **1080×1920** + square **1080×1080** (fit-inside + black pad, geometry QC-exact).
+- `singing` — master + gentler chain (`loudnorm` + `alimiter`) to protect singing; `vocal_enhance` is a clean plugin flag (safe baseline ships; advanced processing reports "not installed" instead of pretending).
+
+### Artifacts (per job dir: `<out>/<jobId>/`)
+
+`out/master.mp4`, `out/vertical.mp4`, `out/square.mp4` (social), `out/captions.srt` + `out/captions.vtt` (when transcript/srt supplied), `out/thumbnail.jpg`, `out/contact-sheet.jpg`, `out/edit-plan.json`, `out/qc.json` (measured checks: codec/geometry/duration/A-V delta/loudness/true-peak/black+silent/checksums), `out/transcript.json` (only if `--transcribe-deep`), `manifest.json` (stage status, provenance: source URL + adapter + sha256 + acquisition time, tool versions, warnings/errors).
+
+### Inputs
+
+Local file path · direct media URL (curl: UA, redirects ≤5, timeout, max-size guard, content-type is authoritative, partial-download cleanup, checksum) · public page URL through the safe adapter (**yt-dlp** required for this path; clean `EUNSUPPORTED_SOURCE` when missing or when the source is protected). Jobs are deterministic (`jobId = sha(input+preset)`), resumable and idempotent — reruns cache-verify artifacts, `--force` recomputes.
+
+### Transcription
+
+Captions require `--srt file` or `--transcript segments.json` (`{"segments":[{"start","end","text"}]}`) — nothing is ever silently invented. `--transcribe-deep` stores the existing `video_see` analysis as a sidecar. Stage status in the manifest is explicit.
+
+### Tests
+
+```sh
+node test/video.js   # 58 checks: unit, E2E over local HTTP, idempotency, failure matrix, QC-negative, operator surface
+node test/smoke.js   # pre-existing suite (19 tools)
+```
+
+Optional non-blocking public smoke: `MYSTIC_VIDEO_SMOKE_URL=<direct media url> node test/video.js`.
+
+### Known V1 limits (non-blocking)
+
+- Multi-cut crossfades are straight cuts + master fade-in/out (no xfade morphing yet).
+- Caption burn-in uses DejaVu fonts via libass; exotic font styling is out of scope.
+- `yt-dlp` is not auto-installed; page-URL inputs require it and fail clearly without it.
