@@ -8,7 +8,7 @@ const path = require('path');
 const os = require('os');
 
 const RUN = path.join(__dirname, 'run.js');
-const BOOL = new Set(['deep', 'full_page', 'full']);
+const BOOL = new Set(['deep', 'full_page', 'full', 'force', 'burn_captions', 'burn-captions', 'transcribe_deep', 'transcribe-deep']);
 
 function usage() {
   console.log(`mystic-studio — AI media studio (photography eye, web review, video, screenshots)
@@ -24,7 +24,9 @@ function usage() {
   mystic-studio catalog [kind]
   mystic-studio vsee <video> [--focus "..."] [--deep]
   mystic-studio vkey <video> [--count 8]
-  mystic-studio video <file-or-url> [--preset master|social|singing] [--out DIR] [--srt F] [--transcript F] [--force true]
+  mystic-studio video <file-or-url> [--preset master|social|singing] [--out DIR]
+                            [--srt F | --transcript F] [--burn-captions] [--reframe crop|pad]
+                            [--transcribe-deep] [--force] [--timeout-ms N] [--max-bytes-mb N]
   mystic-studio vstatus <jobId|jobDir>
   mystic-studio vgif <video> [--start 0] [--sec 5] [--width 480]
   mystic-studio audit <url> [--max-pages 8]     whole-site crawl + consistency
@@ -51,9 +53,17 @@ function main() {
     const a = argv[i];
     if (a === '--deep') { args.deep = true; continue; }
     if (a === '--full' || a === '--full_page') { args.full_page = true; continue; }
+    if (/^-[a-zA-Z]$/.test(a)) { // single-letter value flags like edit's -p
+      args[a.slice(1)] = argv[i + 1] !== undefined ? argv[++i] : true;
+      continue;
+    }
     if (a.startsWith('--')) {
-      const k = a.slice(2), v = argv[++i];
-      args[k] = BOOL.has(k) ? true : (/^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v);
+      const k = a.slice(2);
+      // Boolean flags never consume the next token; a non-boolean flag followed by
+      // another flag / end-of-argv is treated as boolean rather than eating it.
+      if (BOOL.has(k) || argv[i + 1] === undefined || argv[i + 1].startsWith('--')) { args[k] = true; continue; }
+      const v = argv[++i];
+      args[k] = /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v;
       continue;
     }
     pos.push(a);
@@ -108,6 +118,13 @@ function main() {
     if (name === 'photo_edit' && args.p !== undefined) { args.instruction = args.p; delete args.p; }
     if (name === 'video_gif' && args.sec !== undefined) { args.seconds = args.sec; delete args.sec; }
     if (name === 'photo_generate' && args.ar !== undefined) { args.aspect_ratio = args.ar; delete args.ar; }
+    // Normalize kebab-case flags to the snake_case names the tool layer expects
+    // (--burn-captions -> burn_captions, --timeout-ms -> timeout_ms, ...).
+    // Original keys are kept so nothing downstream that reads kebab-case breaks.
+    for (const k of Object.keys(args)) {
+      const nk = k.replace(/-/g, '_');
+      if (nk !== k && args[nk] === undefined) args[nk] = args[k];
+    }
   }
 
   const tmp = path.join(os.tmpdir(), `studio-cli-${Math.random().toString(36).slice(2)}.json`);

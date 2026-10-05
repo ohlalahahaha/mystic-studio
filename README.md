@@ -195,6 +195,8 @@ Deterministic, ffmpeg-only video pipeline attached to the Studio's existing tool
 
 ```sh
 mystic-studio video <file-or-url> --preset master|social|singing --out DIR
+        [--srt F | --transcript F] [--burn-captions] [--reframe crop|pad]
+        [--transcribe-deep] [--force] [--timeout-ms N] [--max-bytes-mb N]
 mystic-studio vstatus <jobId|jobDir> [--out DIR]
 ```
 
@@ -210,25 +212,35 @@ MCP tools: `video_run`, `video_status` (appear automatically in `tools/list`).
 ### Presets
 
 - `master` — H.264/AAC MP4, keep-AR downscale-only ≤1080p, loudness normalized to **-16 LUFS / TP -1.5 dB** (measured, reported), faststart, fade-in/out.
-- `social` — master + vertical **1080×1920** + square **1080×1080** (fit-inside + black pad, geometry QC-exact).
+- `social` — master + vertical **1080×1920** + square **1080×1080**, adaptive center-crop reframing (no letterbox bars; `--reframe pad` restores fit-inside + letterbox), geometry QC-exact.
 - `singing` — master + gentler chain (`loudnorm` + `alimiter`) to protect singing; `vocal_enhance` is a clean plugin flag (safe baseline ships; advanced processing reports "not installed" instead of pretending).
 
 ### Artifacts (per job dir: `<out>/<jobId>/`)
 
-`out/master.mp4`, `out/vertical.mp4`, `out/square.mp4` (social), `out/captions.srt` + `out/captions.vtt` (when transcript/srt supplied), `out/thumbnail.jpg`, `out/contact-sheet.jpg`, `out/edit-plan.json`, `out/qc.json` (measured checks: codec/geometry/duration/A-V delta/loudness/true-peak/black+silent/checksums), `out/transcript.json` (only if `--transcribe-deep`), `manifest.json` (stage status, provenance: source URL + adapter + sha256 + acquisition time, tool versions, warnings/errors).
+`out/master.mp4`, `out/vertical.mp4`, `out/square.mp4` (social), `out/captions.srt` + `out/captions.vtt` (**both** are produced whenever captions are supplied — via `--transcript` or `--srt`; the supplied SRT is copied verbatim and the VTT is derived from it), `out/thumbnail.jpg`, `out/contact-sheet.jpg`, `out/edit-plan.json`, `out/qc.json` (measured checks: codec/geometry/duration/A-V delta/loudness/true-peak/black+silent/srt-monotonic/vtt-format/checksums), `out/transcript.json` (only if `--transcribe-deep`), `manifest.json` (stage status, provenance: source URL + adapter + sha256 + acquisition time, tool versions, warnings/errors).
 
 ### Inputs
 
-Local file path · direct media URL (curl: UA, redirects ≤5, timeout, max-size guard, content-type is authoritative, partial-download cleanup, checksum) · public page URL through the safe adapter (**yt-dlp** required for this path; clean `EUNSUPPORTED_SOURCE` when missing or when the source is protected). Jobs are deterministic (`jobId = sha(input+preset)`), resumable and idempotent — reruns cache-verify artifacts, `--force` recomputes.
+Local file path · direct media URL (curl: UA, redirects ≤5, timeout, max-size guard, content-type is authoritative, partial-download cleanup, checksum) · public page URL through the safe adapter (**yt-dlp** required for this path; clean `EUNSUPPORTED_SOURCE` when missing or when the source is protected). Jobs are deterministic (`jobId = sha(input + preset + captions params + reframe)`), resumable and idempotent — reruns cache-verify artifacts, `--force` recomputes.
 
 ### Transcription
 
 Captions require `--srt file` or `--transcript segments.json` (`{"segments":[{"start","end","text"}]}`) — nothing is ever silently invented. `--transcribe-deep` stores the existing `video_see` analysis as a sidecar. Stage status in the manifest is explicit.
 
+### Caption burn-in
+
+`--burn-captions` burns the captions into the social variants (master stays clean). Requirements and behavior:
+
+- Requires an ffmpeg build **with libass**. Before rendering, the pipeline probes `ffmpeg -filters`; if the `subtitles` filter is missing you get `ERENDER_CAPABILITY` with the exact fix instead of a cryptic ffmpeg exit code (macOS: `brew install ffmpeg`).
+- Filter paths are escaped and the renderer runs with `cwd` = captions dir, so paths with spaces/colons cannot break filter parsing on macOS or Linux.
+- If styled burn-in fails to initialize (font provider issues), the render retries once with the minimal subtitles filter and records a manifest warning — style fallback, never silence.
+- No `FontName` is forced; libass uses a font that exists on the host.
+- Burning happens after crop-reframing (text geometry matches the final canvas) and before padding (text sits on content, not in the black bars).
+
 ### Tests
 
 ```sh
-node test/video.js   # 58 checks: unit, E2E over local HTTP, idempotency, failure matrix, QC-negative, operator surface
+node test/video.js   # 70+ checks: unit, E2E over local HTTP, idempotency, failure matrix, QC-negative, operator surface
 node test/smoke.js   # pre-existing suite (19 tools)
 ```
 
@@ -237,11 +249,12 @@ Optional non-blocking public smoke: `MYSTIC_VIDEO_SMOKE_URL=<direct media url> n
 ### Known V1 limits (non-blocking)
 
 - Multi-cut crossfades are straight cuts + master fade-in/out (no xfade morphing yet).
-- Caption burn-in uses DejaVu fonts via libass; exotic font styling is out of scope.
+- Caption burn-in styling is deliberately minimal (size/outline/margin via libass `force_style`, host default font); exotic font styling is out of scope.
+- Crop reframing is deterministic center-crop (no subject tracking / AI reframing).
 - `yt-dlp` is not auto-installed; page-URL inputs require it and fail clearly without it.
 
 ### V1 notes (R2 review fixes)
-- Caption/burn params are part of the deterministic jobId — adding `--srt`/`--transcript`/`--burn-captions` yields a new job (no silent cache of wrong variants).
+- Caption/burn/flag params are part of the deterministic jobId — adding `--srt`/`--transcript`/`--burn-captions`/`--reframe` yields a new job (no silent cache of wrong variants). The CLI maps documented kebab-case flags (`--burn-captions`, `--transcribe-deep`, `--timeout-ms`, `--max-bytes-mb`) onto the tool layer's snake_case names — documented flags are never ignored.
 - Captions stage precedes variant renders so burn-in always has its source file.
 - Job dirs are tied to their `out` directory (manifests store absolute paths): moving a job tree = copy + rerun with `force=true`. Source-byte changes invalidate render caches automatically (recorded in manifest warnings).
 - Fetch: curl pinned to `--proto =http,https` (no protocol downgrade via redirects); transient network errors retried once; content-type from the server is authoritative.
