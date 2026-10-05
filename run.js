@@ -14,6 +14,6 @@ try {
   const text = dispatch(name, args);
   console.log(JSON.stringify({ ok: true, text: String(text) }));
 } catch (e) {
-  console.log(JSON.stringify({ ok: false, error: e.message }));
+  console.log(JSON.stringify({ ok: false, error: e && e.code ? `${e.code}: ${e.message}` : e.message }));
   process.exit(1);
 }

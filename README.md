@@ -239,3 +239,9 @@ Optional non-blocking public smoke: `MYSTIC_VIDEO_SMOKE_URL=<direct media url> n
 - Multi-cut crossfades are straight cuts + master fade-in/out (no xfade morphing yet).
 - Caption burn-in uses DejaVu fonts via libass; exotic font styling is out of scope.
 - `yt-dlp` is not auto-installed; page-URL inputs require it and fail clearly without it.
+
+### V1 notes (R2 review fixes)
+- Caption/burn params are part of the deterministic jobId — adding `--srt`/`--transcript`/`--burn-captions` yields a new job (no silent cache of wrong variants).
+- Captions stage precedes variant renders so burn-in always has its source file.
+- Job dirs are tied to their `out` directory (manifests store absolute paths): moving a job tree = copy + rerun with `force=true`. Source-byte changes invalidate render caches automatically (recorded in manifest warnings).
+- Fetch: curl pinned to `--proto =http,https` (no protocol downgrade via redirects); transient network errors retried once; content-type from the server is authoritative.

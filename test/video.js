@@ -123,6 +123,11 @@ console.log('== IDEMPOTENCY ==');
   ok(res.manifest.stages.render_master.cached === true, 'render_master cache-skipped on rerun');
   ok(res.status === 'complete', 'rerun completes');
   ok(fs.statSync(path.join(jobDir1, 'out', 'master.mp4')).mtimeMs === before, 'master.mp4 untouched on cached rerun');
+  const r2 = video.runJob({ input: `http://127.0.0.1:${PORT}/landscape.mp4`, preset: 'social', out: JOBS, transcript: transcriptFix, burnCaptions: true });
+  ok(r2.jobId !== jobId1, 'output-changing params (captions/burn) produce a new deterministic jobId');
+  ok(r2.status === 'complete' && r2.manifest.params.burnCaptions === true && r2.manifest.stages.render_master.cached !== true, 'renders recompute for new caption params');
+  ok(JSON.parse(fs.readFileSync(path.join(r2.jobDir, 'out', 'edit-plan.json'), 'utf8')).burnCaptions === true, 'burn flag present in hydrated plan');
+  ok(fs.existsSync(path.join(r2.jobDir, 'out', 'vertical.mp4')), 'burn-captions vertical rendered (captions stage precedes variants)');
 }
 
 console.log('== FAILURE MATRIX ==');
@@ -139,7 +144,6 @@ console.log('== FAILURE MATRIX ==');
 {
   const r = video.runJob({ input: noaudio, preset: 'master', out: JOBS });
   ok(r.status === 'complete' && r.manifest.artifacts.master.bytes > 0, 'no-audio clip completes (-an by design)');
-  ok(r.manifest.plan ? true : true);
   const plan = JSON.parse(fs.readFileSync(path.join(r.jobDir, 'out', 'edit-plan.json'), 'utf8'));
   ok(plan.audio.enabled === false, 'no-audio plan: audio disabled explicitly');
   ok(JSON.parse(fs.readFileSync(path.join(r.jobDir, 'out', 'qc.json'), 'utf8')).pass === true, 'no-audio QC pass (audio-absent expected)');

@@ -19,7 +19,8 @@
 
 ## Stages (each = manifest.stages[name]: {status, startedAt, finishedAt, outputs, warnings, error?})
 acquire → probe → scenes → transcribe(optional, EXPLICIT skip when no provider) → editplan → audio(plan+measure)
-→ render_master → render_vertical → render_square (social preset) → captions → thumbnail → contact_sheet → qc
+→ captions → render_master → render_vertical → render_square (social preset) → thumbnail → contact_sheet → qc
+(captions precede variants so burn-in has its source; jobId = sha(input+preset+caption-params); curlFetch retries network errors once)
 
 ## Presets
 - `master`: H.264/AAC MP4, keep-AR scale ≤1080p, loudnorm I=-16 TP=-1.5 LRA=11, faststart, even dims

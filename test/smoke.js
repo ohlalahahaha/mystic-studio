@@ -51,7 +51,7 @@ assert(/TREATMENT DISCIPLINE/.test(prompts.DESIGN_LAW), 'DESIGN_LAW is treatment
 const { TOOLS } = require(path.join(ROOT, 'lib', 'core'));
 
 // 3. tool list: 19 tools, schema'd, neutral
-assert.strictEqual(TOOLS.length, 19, '17 tools');
+assert.strictEqual(TOOLS.length, 19, '19 tools');
 for (const t of TOOLS) { assert(t.name && t.description && t.inputSchema, `${t.name} complete`); assert(!/Phoenix/i.test(t.description)); }
 const names = TOOLS.map((t) => t.name);
 for (const want of ['photo_see', 'web_review', 'recheck', 'studio_doctor', 'video_gif', 'photo_generate', 'web_audit', 'polish', 'taste_note', 'treatments', 'motion_assets', 'motion_prototype']) assert(names.includes(want), `${want} present`);
@@ -70,7 +70,7 @@ const hs = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], { input: 
 const lines = hs.stdout.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
 assert(lines.find((m) => m.id === 1 && m.result && m.result.serverInfo), 'initialize answered');
 const toolsMsg = lines.find((m) => m.id === 2);
-assert(toolsMsg.result.tools.length === 17, 'tools/list answered with 19');
+assert(toolsMsg.result.tools.length === 19, 'tools/list answered with 19');
 
 // 5. unknown tool -> clean MCP error
 const bad = spawnSync(process.execPath, [path.join(ROOT, 'server.js')], {
