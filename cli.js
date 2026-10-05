@@ -24,6 +24,8 @@ function usage() {
   mystic-studio catalog [kind]
   mystic-studio vsee <video> [--focus "..."] [--deep]
   mystic-studio vkey <video> [--count 8]
+  mystic-studio video <file-or-url> [--preset master|social|singing] [--out DIR] [--srt F] [--transcript F] [--force true]
+  mystic-studio vstatus <jobId|jobDir>
   mystic-studio vgif <video> [--start 0] [--sec 5] [--width 480]
   mystic-studio audit <url> [--max-pages 8]     whole-site crawl + consistency
   mystic-studio polish --url u --repo dir [--motion gsap,lenis]  fix loop
@@ -79,6 +81,8 @@ function main() {
     case 'catalog': name = 'studio_catalog'; if (pos[0]) args.kind = pos[0]; break;
     case 'vsee': name = 'video_see'; args.video = pos[0]; break;
     case 'vkey': name = 'video_keyframes'; args.video = pos[0]; break;
+    case 'video': name = 'video_run'; args.input = pos[0]; break;
+    case 'vstatus': name = 'video_status'; args.job = pos[0]; break;
     case 'vgif': name = 'video_gif'; args.video = pos[0]; break;
     case 'audit': name = 'web_audit'; args.url = pos[0]; break;
     case 'polish': name = 'polish'; break;
